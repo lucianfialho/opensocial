@@ -6,6 +6,7 @@ import { publishToAll, ValidationError } from './publish.js'
 import { saveAccount } from './accounts.js'
 import { adapters } from './adapter.js'
 import { ApiError } from './errors.js'
+import type { PublishResult } from './types.js'
 
 let dir: string
 beforeEach(() => {
@@ -61,4 +62,31 @@ it('missing account fails before anything publishes', async () => {
   const igSpy = vi.spyOn(adapters.instagram, 'publish')
   await expect(publishToAll(['instagram'], { text: 'x', media: [{ source: 'https://c/a.jpg' }] })).rejects.toThrow(/connect instagram/)
   expect(igSpy).not.toHaveBeenCalled()
+})
+
+it('media resolution failure on one platform does not abort the others', async () => {
+  vi.spyOn(adapters.instagram, 'publish').mockResolvedValue({ platform: 'instagram', id: 'M3', url: 'https://ig/p3' } as PublishResult)
+  // tiktok video uses direct-upload ingestion and points at a local file that does not exist -> resolveMedia throws
+  const results = await publishToAll(
+    ['tiktok', 'instagram'],
+    {
+      text: 'x',
+      overrides: {
+        tiktok: { media: [{ source: '/no/such/video.mp4' }] },
+        instagram: { media: [{ source: 'https://c/a.jpg' }] },
+      },
+    },
+  )
+  expect(results).toEqual([
+    { platform: 'tiktok', status: 'failed', error: expect.stringMatching(/Media file not found/) },
+    { platform: 'instagram', status: 'published', id: 'M3', url: 'https://ig/p3' },
+  ])
+})
+
+it('429 from a plain ApiError is reported as rate limited', async () => {
+  vi.spyOn(adapters.instagram, 'publish').mockRejectedValue(new ApiError('too many', 429))
+  const results = await publishToAll(['instagram'], { text: 'x', media: [{ source: 'https://c/a.jpg' }] })
+  expect(results).toEqual([
+    { platform: 'instagram', status: 'failed', error: expect.stringMatching(/Rate limited by/) },
+  ])
 })

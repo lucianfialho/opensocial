@@ -33,9 +33,12 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
   for (const p of platforms) {
     const adapter = adapters[p]
     const ep = effectivePost(post, p)
-    const { media, cleanup } = await resolveMedia(ep.media, adapter.mediaIngestion, host)
     const options = { tiktokPrivacyLevel: config.tiktok?.privacyLevel }
+    let cleanup: (() => Promise<void>) | undefined
     try {
+      const resolved = await resolveMedia(ep.media, adapter.mediaIngestion, host)
+      cleanup = resolved.cleanup
+      const media = resolved.media
       let account = accounts.get(p)!
       let result
       try {
@@ -49,13 +52,13 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
       }
       results.push({ platform: p, status: 'published', id: result.id, url: result.url })
     } catch (err) {
-      const message =
-        err instanceof RateLimitError
-          ? `Rate limited by ${p}${err.retryAfterSeconds ? ` — retry after ${err.retryAfterSeconds}s` : ''}`
-          : err instanceof Error ? err.message : String(err)
+      const isRateLimited = err instanceof RateLimitError || (err instanceof ApiError && err.status === 429)
+      const message = isRateLimited
+        ? `Rate limited by ${p}${err instanceof RateLimitError && err.retryAfterSeconds ? ` — retry after ${err.retryAfterSeconds}s` : ''}`
+        : err instanceof Error ? err.message : String(err)
       results.push({ platform: p, status: 'failed', error: message })
     } finally {
-      await cleanup()
+      await cleanup?.()
     }
   }
   return results
