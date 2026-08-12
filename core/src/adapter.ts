@@ -9,6 +9,8 @@ import type {
   PublishResult,
   ValidationIssue,
 } from './types.js'
+import { instagramAdapter } from './adapters/instagram.js'
+import { tiktokAdapter } from './adapters/tiktok.js'
 
 export interface PlatformAdapter {
   platform: Platform
@@ -36,4 +38,9 @@ export interface PlatformAdapter {
 
 export interface AdapterPublishOptions {
   tiktokPrivacyLevel?: string
+}
+
+export const adapters: Record<Platform, PlatformAdapter> = {
+  instagram: instagramAdapter,
+  tiktok: tiktokAdapter,
 }
