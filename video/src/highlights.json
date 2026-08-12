@@ -1,0 +1,22 @@
+{
+  "image": {
+    "width": 770,
+    "height": 436
+  },
+  "phrases": [
+    {
+      "text": "government shutdown",
+      "x": 217,
+      "y": 143,
+      "width": 279,
+      "height": 47
+    },
+    {
+      "text": "funding lapses",
+      "x": 97,
+      "y": 179,
+      "width": 209,
+      "height": 41
+    }
+  ]
+}

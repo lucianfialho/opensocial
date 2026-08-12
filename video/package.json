@@ -1,0 +1,26 @@
+{
+  "name": "@opensocial/video",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render ArticleHighlight out/article-highlight.mp4",
+    "still": "remotion still ArticleHighlight",
+    "ocr": "node scripts/ocr.mjs",
+    "carousel": "node scripts/carousel.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0",
+    "roughjs": "^4.6.6",
+    "zod": "^3.22.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
