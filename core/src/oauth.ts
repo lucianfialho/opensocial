@@ -73,7 +73,7 @@ export function waitForCallback(expectedState: string, timeoutMs = 300_000): Pro
       }
     })
 
-    server.listen(OAUTH_PORT)
+    server.listen(OAUTH_PORT, '127.0.0.1')
   })
 
   // Attach a no-op catch handler to prevent unhandled rejection warnings

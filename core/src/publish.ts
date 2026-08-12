@@ -45,7 +45,12 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
         result = await adapter.publish(account, { text: ep.text, media }, options, fetchImpl)
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
-          account = await adapter.refreshToken(getAppCredentials(config, p), account, fetchImpl)
+          try {
+            account = await adapter.refreshToken(getAppCredentials(config, p), account, fetchImpl)
+          } catch (refreshErr) {
+            const refreshMessage = refreshErr instanceof Error ? refreshErr.message : String(refreshErr)
+            throw new OpenSocialError(`${refreshMessage} — token refresh failed; run \`opensocial connect ${p}\` to re-authenticate`)
+          }
           saveAccount(account)
           result = await adapter.publish(account, { text: ep.text, media }, options, fetchImpl)
         } else throw err

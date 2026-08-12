@@ -57,6 +57,19 @@ it('401 triggers refresh + single retry and persists refreshed account', async (
   delete process.env.OPENSOCIAL_INSTAGRAM_CLIENT_SECRET
 })
 
+it('401 with failing refreshToken surfaces a re-connect hint as a failed result', async () => {
+  vi.spyOn(adapters.instagram, 'publish').mockRejectedValue(new ApiError('expired', 401))
+  vi.spyOn(adapters.instagram, 'refreshToken').mockRejectedValue(new Error('refresh token revoked'))
+  process.env.OPENSOCIAL_INSTAGRAM_CLIENT_ID = 'a'
+  process.env.OPENSOCIAL_INSTAGRAM_CLIENT_SECRET = 'b'
+  const results = await publishToAll(['instagram'], { text: 'x', media: [{ source: 'https://c/a.jpg' }] })
+  expect(results).toEqual([
+    { platform: 'instagram', status: 'failed', error: expect.stringMatching(/opensocial connect instagram/) },
+  ])
+  delete process.env.OPENSOCIAL_INSTAGRAM_CLIENT_ID
+  delete process.env.OPENSOCIAL_INSTAGRAM_CLIENT_SECRET
+})
+
 it('missing account fails before anything publishes', async () => {
   rmSync(join(dir, 'accounts.json'))
   const igSpy = vi.spyOn(adapters.instagram, 'publish')

@@ -29,7 +29,7 @@ it('rejects when provider returns error param', async () => {
 })
 
 it('rejects and cleans up when server port is unavailable', async () => {
-  const dummy = createServer().listen(OAUTH_PORT)
+  const dummy = createServer().listen(OAUTH_PORT, '127.0.0.1')
   const pending = waitForCallback('abc')
   await expect(pending).rejects.toThrow(/EADDRINUSE/)
   dummy.close()

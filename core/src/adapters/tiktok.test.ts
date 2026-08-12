@@ -90,6 +90,14 @@ describe('publish', () => {
     expect(calls).toHaveLength(0)
   })
 
+  it('video via public URL (no filePath) is rejected before any network call', async () => {
+    const { fetch, calls } = sequenceFetch([])
+    await expect(
+      tiktokAdapter.publish(account, { text: '', media: [{ kind: 'video', url: 'https://cdn/v.mp4' }] }, {}, fetch),
+    ).rejects.toThrow(/public URL is not supported in v1/)
+    expect(calls).toHaveLength(0)
+  })
+
   it('photos: content init with PULL_FROM_URL', async () => {
     const { fetch, calls } = sequenceFetch([
       jsonResponse({ data: { publish_id: 'P2' }, error: { code: 'ok', message: '' } }),

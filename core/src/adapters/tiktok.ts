@@ -112,7 +112,10 @@ export const tiktokAdapter: PlatformAdapter = {
     const video = post.media.find((m) => m.kind === 'video')
 
     if (video) {
-      const size = statSync(video.filePath!).size
+      if (!video.filePath) {
+        throw new MediaRejectedError('TikTok video via public URL is not supported in v1 — pass a local file path')
+      }
+      const size = statSync(video.filePath).size
       if (size > MAX_VIDEO_BYTES) {
         throw new MediaRejectedError(`Video is ${(size / 1024 / 1024).toFixed(1)}MB; v1 supports videos up to 64MB (single-chunk upload).`)
       }
