@@ -1,0 +1,12 @@
+{
+  "name": "opensocial",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "opensocial": "./dist/index.js" },
+  "scripts": { "build": "tsc" },
+  "dependencies": {
+    "@opensocial/core": "workspace:*",
+    "commander": "^12.0.0",
+    "open": "^10.0.0"
+  }
+}
