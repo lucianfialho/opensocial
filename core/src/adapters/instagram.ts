@@ -1,7 +1,8 @@
 import type { PlatformAdapter, AdapterPublishOptions } from '../adapter.js'
 import type { Account, AppCredentials, Fetch, PreparedPost, PublishResult, ValidationIssue } from '../types.js'
-import { ApiError } from '../errors.js'
+import { ApiError, MediaRejectedError } from '../errors.js'
 import { mediaKind } from '../post.js'
+import { pollUntil } from '../poll.js'
 
 const GRAPH = 'https://graph.instagram.com'
 const API_VERSION = 'v21.0'
@@ -12,6 +13,19 @@ async function json<T>(res: Response, context: string): Promise<T> {
     throw new ApiError(`Instagram ${context} failed (${res.status}): ${body}`, res.status)
   }
   return res.json() as Promise<T>
+}
+
+function pollInterval(): number {
+  return Number(process.env.OPENSOCIAL_POLL_INTERVAL_MS ?? 2000)
+}
+
+async function createContainer(accountId: string, token: string, params: Record<string, string>, fetchImpl: Fetch): Promise<string> {
+  const body = new URLSearchParams({ ...params, access_token: token })
+  const out = await json<{ id: string }>(
+    await fetchImpl(`${GRAPH}/${API_VERSION}/${accountId}/media`, { method: 'POST', body }),
+    'container creation',
+  )
+  return out.id
 }
 
 export const instagramAdapter: PlatformAdapter = {
@@ -70,7 +84,47 @@ export const instagramAdapter: PlatformAdapter = {
     return issues
   },
 
-  async publish(account, post, options, fetchImpl = globalThis.fetch): Promise<PublishResult> {
-    throw new ApiError('not implemented yet', 501) // Task 10
+  async publish(account, post, _options, fetchImpl = globalThis.fetch): Promise<PublishResult> {
+    const token = account.accessToken
+    let creationId: string
+
+    if (post.media.length === 1 && post.media[0].kind === 'video') {
+      creationId = await createContainer(account.id, token, {
+        media_type: 'REELS', video_url: post.media[0].url!, caption: post.text,
+      }, fetchImpl)
+      const status = await pollUntil(
+        async () => {
+          const res = await fetchImpl(`${GRAPH}/${API_VERSION}/${creationId}?fields=status_code&access_token=${token}`)
+          return json<{ status_code: string }>(res, 'container status')
+        },
+        (s) => s.status_code !== 'IN_PROGRESS',
+        { intervalMs: pollInterval(), label: 'instagram video processing' },
+      )
+      if (status.status_code !== 'FINISHED') {
+        throw new MediaRejectedError(`Instagram rejected the video (status ${status.status_code}). Check format/duration/aspect-ratio limits for Reels.`)
+      }
+    } else if (post.media.length === 1) {
+      creationId = await createContainer(account.id, token, { image_url: post.media[0].url!, caption: post.text }, fetchImpl)
+    } else {
+      const children: string[] = []
+      for (const m of post.media) {
+        children.push(await createContainer(account.id, token, { image_url: m.url!, is_carousel_item: 'true' }, fetchImpl))
+      }
+      creationId = await createContainer(account.id, token, {
+        media_type: 'CAROUSEL', children: children.join(','), caption: post.text,
+      }, fetchImpl)
+    }
+
+    const published = await json<{ id: string }>(
+      await fetchImpl(`${GRAPH}/${API_VERSION}/${account.id}/media_publish`, {
+        method: 'POST', body: new URLSearchParams({ creation_id: creationId, access_token: token }),
+      }),
+      'media publish',
+    )
+    const perma = await json<{ permalink?: string }>(
+      await fetchImpl(`${GRAPH}/${API_VERSION}/${published.id}?fields=permalink&access_token=${token}`),
+      'permalink fetch',
+    )
+    return { platform: 'instagram', id: published.id, url: perma.permalink }
   },
 }

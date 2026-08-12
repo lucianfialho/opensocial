@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { instagramAdapter } from './instagram.js'
 import { jsonResponse, sequenceFetch } from '../test-helpers.js'
 
@@ -46,5 +46,65 @@ describe('validate', () => {
   })
   it('accepts single image with caption', () => {
     expect(instagramAdapter.validate({ text: 'ok', media: [{ source: 'a.jpg' }] })).toEqual([])
+  })
+})
+
+describe('publish', () => {
+  const account = { platform: 'instagram' as const, id: 'IGID', username: 'u', accessToken: 'TOK' }
+
+  it('single image: container -> publish -> permalink', async () => {
+    const { fetch, calls } = sequenceFetch([
+      jsonResponse({ id: 'C1' }),
+      jsonResponse({ id: 'M1' }),
+      jsonResponse({ permalink: 'https://www.instagram.com/p/xyz/' }),
+    ])
+    const out = await instagramAdapter.publish(
+      account, { text: 'cap', media: [{ kind: 'image', url: 'https://cdn/x.jpg' }] }, {}, fetch,
+    )
+    expect(calls[0].url).toBe('https://graph.instagram.com/v21.0/IGID/media')
+    expect(String(calls[0].init?.body)).toContain('image_url=')
+    expect(calls[1].url).toBe('https://graph.instagram.com/v21.0/IGID/media_publish')
+    expect(out).toEqual({ platform: 'instagram', id: 'M1', url: 'https://www.instagram.com/p/xyz/' })
+  })
+
+  it('carousel: child containers then carousel container', async () => {
+    const { fetch, calls } = sequenceFetch([
+      jsonResponse({ id: 'A' }), jsonResponse({ id: 'B' }),
+      jsonResponse({ id: 'CAR' }), jsonResponse({ id: 'M2' }),
+      jsonResponse({ permalink: 'https://www.instagram.com/p/car/' }),
+    ])
+    await instagramAdapter.publish(
+      account,
+      { text: 'cap', media: [{ kind: 'image', url: 'https://cdn/1.jpg' }, { kind: 'image', url: 'https://cdn/2.jpg' }] },
+      {}, fetch,
+    )
+    expect(String(calls[0].init?.body)).toContain('is_carousel_item=true')
+    expect(String(calls[2].init?.body)).toContain('media_type=CAROUSEL')
+    expect(String(calls[2].init?.body)).toContain('children=A%2CB')
+  })
+
+  describe('reel', () => {
+    beforeEach(() => {
+      process.env.OPENSOCIAL_POLL_INTERVAL_MS = '1'
+    })
+    afterEach(() => {
+      delete process.env.OPENSOCIAL_POLL_INTERVAL_MS
+    })
+
+    it('polls status until FINISHED before publishing', async () => {
+      const { fetch, calls } = sequenceFetch([
+        jsonResponse({ id: 'V1' }),
+        jsonResponse({ status_code: 'IN_PROGRESS' }),
+        jsonResponse({ status_code: 'FINISHED' }),
+        jsonResponse({ id: 'M3' }),
+        jsonResponse({ permalink: 'https://www.instagram.com/reel/abc/' }),
+      ])
+      const out = await instagramAdapter.publish(
+        account, { text: 'reel!', media: [{ kind: 'video', url: 'https://cdn/v.mp4' }] }, {}, fetch,
+      )
+      expect(String(calls[0].init?.body)).toContain('media_type=REELS')
+      expect(calls[1].url).toContain('fields=status_code')
+      expect(out.id).toBe('M3')
+    })
   })
 })
