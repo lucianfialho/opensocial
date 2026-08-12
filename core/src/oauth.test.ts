@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { createServer } from 'node:http'
 import { waitForCallback, randomState, OAUTH_PORT } from './oauth.js'
 
 describe.sequential('OAuth', () => {
@@ -25,5 +26,12 @@ it('rejects when provider returns error param', async () => {
   const pending = waitForCallback('abc')
   await fetch(`http://localhost:${OAUTH_PORT}/callback?error=access_denied&state=abc`)
   await expect(pending).rejects.toThrow(/access_denied/)
+})
+
+it('rejects and cleans up when server port is unavailable', async () => {
+  const dummy = createServer().listen(OAUTH_PORT)
+  const pending = waitForCallback('abc')
+  await expect(pending).rejects.toThrow(/EADDRINUSE/)
+  dummy.close()
 })
 })

@@ -67,6 +67,8 @@ export function waitForCallback(expectedState: string, timeoutMs = 300_000): Pro
     server.on('error', (err) => {
       if (!settled) {
         settled = true
+        clearTimeout(timer)
+        server.close()
         reject(err)
       }
     })
