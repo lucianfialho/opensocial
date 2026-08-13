@@ -1,8 +1,10 @@
 import React from 'react';
-import {Series} from 'remotion';
+import {AbsoluteFill, Audio, Series, staticFile} from 'remotion';
 import type {CalculateMetadataFunction} from 'remotion';
 import {z} from 'zod';
+import {CaptionOverlay} from './CaptionOverlay';
 import {TextArticle} from './TextArticle';
+import {narrationSchema, sceneDurations} from './narration';
 import {ClaimScene} from './scenes/ClaimScene';
 import {SourcesScene} from './scenes/SourcesScene';
 import {ClosingScene} from './scenes/ClosingScene';
@@ -30,72 +32,79 @@ export const newsReelSchema = z.object({
   ),
   brand: z.string(),
   tagline: z.string(),
+  narration: narrationSchema,
 });
 
 export type NewsReelProps = z.infer<typeof newsReelSchema>;
 
-const HOOK = 150;
-const CLAIM = 135;
-const SOURCES = 120;
-const CLOSING = 90;
 const MAX_CLAIMS = 3;
+
+const total = (props: NewsReelProps) => {
+  const d = sceneDurations(Math.min(props.claims.length, MAX_CLAIMS), props.narration);
+  return d.hook + d.claims.reduce((a, b) => a + b, 0) + d.sources + d.closing;
+};
 
 export const calculateNewsReelMetadata: CalculateMetadataFunction<NewsReelProps> = ({
   props,
-}) => ({
-  durationInFrames:
-    HOOK + Math.min(props.claims.length, MAX_CLAIMS) * CLAIM + SOURCES + CLOSING,
-});
+}) => ({durationInFrames: total(props)});
 
-export const NewsReel: React.FC<NewsReelProps> = ({
-  kicker,
-  headline,
-  highlights,
-  dateline,
-  independentSources,
-  image,
-  claims,
-  sources,
-  brand,
-  tagline,
-}) => {
+export const NewsReel: React.FC<NewsReelProps> = (props) => {
+  const {kicker, headline, highlights, dateline, independentSources, image} = props;
+  const {claims, sources, brand, tagline, narration} = props;
   const shownClaims = claims.slice(0, MAX_CLAIMS);
+  const durations = sceneDurations(shownClaims.length, narration);
   return (
-    <Series>
-      <Series.Sequence durationInFrames={HOOK}>
-        <TextArticle
-          kicker={kicker}
-          headline={headline}
-          highlights={highlights}
-          byline={`Apuração: ${independentSources} veículos independentes`}
-          dateline={dateline}
-          sweepDurationInFrames={HOOK}
-          image={image}
-        />
-      </Series.Sequence>
-      {shownClaims.map((claim, i) => (
-        <Series.Sequence key={i} durationInFrames={CLAIM}>
-          <ClaimScene
-            label={claim.label}
-            texto={claim.texto}
-            gloss={claim.gloss}
-            highlights={claim.highlights}
-            image={claim.image}
-            durationInFrames={CLAIM}
-            direction={i % 2 === 0 ? 'right' : 'left'}
+    <AbsoluteFill>
+      <Series>
+        <Series.Sequence durationInFrames={durations.hook}>
+          <TextArticle
+            kicker={kicker}
+            headline={headline}
+            highlights={highlights}
+            byline={`Apuração: ${independentSources} veículos independentes`}
+            dateline={dateline}
+            sweepDurationInFrames={durations.hook}
+            image={image}
           />
         </Series.Sequence>
-      ))}
-      <Series.Sequence durationInFrames={SOURCES}>
-        <SourcesScene
-          independentSources={independentSources}
-          sources={sources}
-          durationInFrames={SOURCES}
-        />
-      </Series.Sequence>
-      <Series.Sequence durationInFrames={CLOSING}>
-        <ClosingScene brand={brand} tagline={tagline} image={image} durationInFrames={CLOSING} />
-      </Series.Sequence>
-    </Series>
+        {shownClaims.map((claim, i) => (
+          <Series.Sequence key={i} durationInFrames={durations.claims[i]}>
+            <ClaimScene
+              label={claim.label}
+              texto={claim.texto}
+              gloss={claim.gloss}
+              highlights={claim.highlights}
+              image={claim.image}
+              durationInFrames={durations.claims[i]}
+              direction={i % 2 === 0 ? 'right' : 'left'}
+            />
+          </Series.Sequence>
+        ))}
+        <Series.Sequence durationInFrames={durations.sources}>
+          <SourcesScene
+            independentSources={independentSources}
+            sources={sources}
+            durationInFrames={durations.sources}
+          />
+        </Series.Sequence>
+        <Series.Sequence durationInFrames={durations.closing}>
+          <ClosingScene brand={brand} tagline={tagline} image={image} durationInFrames={durations.closing} />
+        </Series.Sequence>
+      </Series>
+      {/* continuous voice + global word-by-word caption on top of every scene */}
+      {narration ? (
+        <>
+          <Audio src={staticFile(narration.clip.src)} />
+          <CaptionOverlay
+            clip={narration.clip}
+            whiteFromFrame={
+              durations.hook +
+              durations.claims.reduce((a, b) => a + b, 0) +
+              durations.sources
+            }
+          />
+        </>
+      ) : null}
+    </AbsoluteFill>
   );
 };

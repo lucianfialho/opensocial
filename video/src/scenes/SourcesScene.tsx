@@ -23,7 +23,7 @@ const SourceRow: React.FC<{source: SourceItem; index: number}> = ({source, index
         display: 'flex',
         alignItems: 'center',
         gap: 14,
-        fontSize: 28,
+        fontSize: 34,
         color: '#333',
         marginTop: 18,
         opacity: enter,
@@ -33,10 +33,10 @@ const SourceRow: React.FC<{source: SourceItem; index: number}> = ({source, index
       {source.favicon ? (
         <Img
           src={source.favicon}
-          style={{width: 34, height: 34, borderRadius: 8, display: 'block'}}
+          style={{width: 40, height: 40, borderRadius: 8, display: 'block'}}
         />
       ) : (
-        <div style={{width: 34, height: 34, borderRadius: 8, backgroundColor: '#eee'}} />
+        <div style={{width: 40, height: 40, borderRadius: 8, backgroundColor: '#eee'}} />
       )}
       <span style={{fontWeight: 600}}>{source.name}</span>
       <span style={{color: '#888'}}> · {source.date}</span>
@@ -62,7 +62,7 @@ export const SourcesScene: React.FC<{
       >
         <div
           style={{
-            fontSize: 24,
+            fontSize: 28,
             color: '#555',
             textDecoration: 'underline',
             textUnderlineOffset: 6,
@@ -74,7 +74,7 @@ export const SourcesScene: React.FC<{
         <HeadlineWithHighlights
           headline={`Confirmado por ${phrase}`}
           highlights={[phrase]}
-          fontSize={52}
+          fontSize={62}
           highlightStartAt={14}
         />
         <div style={{marginTop: 26}}>

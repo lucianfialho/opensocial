@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {DESIGN_WIDTH} from '../ArticleMotion';
+import {useSafeAreaPadding} from '../safeArea';
 
 /**
  * Lighter stage for the scenes after the hook: no blur, no 3D — the card
@@ -26,9 +27,11 @@ export const SlideStage: React.FC<{
         ? `translateX(${-offset}px)`
         : `translateX(${offset}px)`;
 
+  const safe = useSafeAreaPadding();
+
   return (
     <AbsoluteFill style={{backgroundColor: 'white'}}>
-      <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center'}}>
+      <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', ...safe}}>
         <div
           style={{
             width: DESIGN_WIDTH,

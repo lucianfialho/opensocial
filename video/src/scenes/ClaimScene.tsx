@@ -33,7 +33,7 @@ export const ClaimScene: React.FC<{
         {image ? <ImageWithCredit image={image} height={380} /> : null}
         <div
           style={{
-            fontSize: 24,
+            fontSize: 28,
             color: '#555',
             textDecoration: 'underline',
             textUnderlineOffset: 6,
@@ -45,11 +45,11 @@ export const ClaimScene: React.FC<{
         <HeadlineWithHighlights
           headline={texto}
           highlights={highlights && highlights.length > 0 ? highlights : numberPhrases(texto)}
-          fontSize={46}
+          fontSize={56}
           highlightStartAt={18}
         />
         {gloss ? (
-          <div style={{fontSize: 27, color: '#555', marginTop: 34, lineHeight: 1.5}}>
+          <div style={{fontSize: 32, color: '#555', marginTop: 34, lineHeight: 1.5}}>
             <span style={{fontWeight: 600, color: '#333'}}>Por que importa: </span>
             {gloss}
           </div>

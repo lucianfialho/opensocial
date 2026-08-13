@@ -6,6 +6,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
+import {useSafeAreaPadding} from './safeArea';
 
 export const BLUR_DURATION_IN_FRAMES = 30; // 1s at 30fps
 export const HIGHLIGHT_DURATION_IN_FRAMES = 30;
@@ -58,10 +59,12 @@ export const ArticleMotion: React.FC<{
   const rotateY = interpolate(frame, [0, durationInFrames], [-7.5, 7.5]);
   const rotateX = interpolate(frame, [0, durationInFrames], [7.5, -7.5]);
 
+  const safe = useSafeAreaPadding();
+
   return (
     <AbsoluteFill style={{backgroundColor: 'white', filter: `blur(${blur}px)`}}>
       <AbsoluteFill
-        style={{justifyContent: 'center', alignItems: 'center', perspective: 1600}}
+        style={{justifyContent: 'center', alignItems: 'center', perspective: 1600, ...safe}}
       >
         <div
           style={{

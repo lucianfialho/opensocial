@@ -105,7 +105,7 @@ export const TextArticle: React.FC<
         {image ? <ImageWithCredit image={image} height={520} /> : null}
         <div
           style={{
-            fontSize: 24,
+            fontSize: 28,
             color: '#555',
             textDecoration: 'underline',
             textUnderlineOffset: 6,
@@ -115,8 +115,8 @@ export const TextArticle: React.FC<
           {kicker}
         </div>
         <HeadlineWithHighlights headline={headline} highlights={highlights} />
-        <div style={{fontSize: 24, color: '#333', marginTop: 34}}>{byline}</div>
-        <div style={{fontSize: 22, color: '#666', marginTop: 14}}>{dateline}</div>
+        <div style={{fontSize: 28, color: '#333', marginTop: 34}}>{byline}</div>
+        <div style={{fontSize: 26, color: '#666', marginTop: 14}}>{dateline}</div>
       </div>
     </ArticleMotion>
   );

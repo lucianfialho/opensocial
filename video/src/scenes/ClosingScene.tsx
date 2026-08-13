@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {CreditedImage} from '../ImageWithCredit';
+import {useSafeAreaPadding} from '../safeArea';
 
 const SANS =
   '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Roboto, sans-serif';
@@ -14,6 +15,7 @@ export const ClosingScene: React.FC<{
 }> = ({brand, tagline, image}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
+  const safe = useSafeAreaPadding();
   const pop = (delay: number) =>
     spring({frame: frame - delay, fps, config: {damping: 200}});
 
@@ -37,7 +39,7 @@ export const ClosingScene: React.FC<{
         />
       ) : null}
       <AbsoluteFill
-        style={{justifyContent: 'center', alignItems: 'center', textAlign: 'center'}}
+        style={{justifyContent: 'center', alignItems: 'center', textAlign: 'center', ...safe}}
       >
         <div
           style={{

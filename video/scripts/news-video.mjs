@@ -11,7 +11,7 @@
 //
 // Token: OAGENTICO_TOKEN env var, or packages/video/.env (gitignored).
 import {execFileSync} from 'node:child_process';
-import {existsSync, readFileSync} from 'node:fs';
+import {existsSync, readFileSync, writeFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {buildReelProps, buildSingleSceneProps} from './build-props.mjs';
@@ -48,11 +48,22 @@ const get = async (path) => {
   return res.json();
 };
 
-const {dados: week} = await get('/eventos/semana');
-const story = week[index];
-if (!story) {
-  console.error(`Sem notícia no índice ${index} (a semana tem ${week.length}).`);
-  process.exit(1);
+const wantedId = flag('id', null);
+let story;
+if (wantedId) {
+  const {dados: recent} = await get('/eventos?limite=100');
+  story = recent.find((e) => String(e.id) === wantedId);
+  if (!story) {
+    console.error(`Evento ${wantedId} não está nos últimos 100.`);
+    process.exit(1);
+  }
+} else {
+  const {dados: week} = await get('/eventos/semana');
+  story = week[index];
+  if (!story) {
+    console.error(`Sem notícia no índice ${index} (a semana tem ${week.length}).`);
+    process.exit(1);
+  }
 }
 
 const {dados: detail} = await get(`/eventos/${story.id}`);
@@ -65,6 +76,34 @@ const props = format.startsWith('ArticleText')
   ? buildSingleSceneProps({story, highlights})
   : buildReelProps({story, detail, highlights, mode});
 
+if (!format.startsWith('ArticleText')) {
+  const {narrateContinuous, sentenceCuts, envValue} = await import('./tts.mjs');
+  const elevenKey = envValue('ELEVENLABS_API_KEY');
+  if (elevenKey && !args.includes('--no-tts')) {
+    // One continuous anchor read: title + summary + CTA. No pauses.
+    const hookText = story.title.endsWith('.') ? story.title : `${story.title}.`;
+    const sceneTexts = props.claims.map((c) => c.texto);
+    const ctaText = 'Siga o agêntico. O futuro da IA, todo dia, num clique.';
+    const allTexts = [hookText, ...sceneTexts, ctaText];
+    const clip = await narrateContinuous(story.id, allTexts.join(' '), elevenKey);
+    const cuts = sentenceCuts(clip, allTexts);
+    // the sources beat plays under the start of the CTA speech
+    const ctaFrames = cuts[cuts.length - 1] + 10; // small visual tail
+    const sourcesFrames = Math.min(55, Math.round(ctaFrames * 0.45));
+    props.narration = {
+      clip,
+      cuts: {
+        hook: cuts[0],
+        claims: cuts.slice(1, -1),
+        sources: sourcesFrames,
+        closing: ctaFrames - sourcesFrames,
+      },
+    };
+  } else {
+    props.narration = null;
+  }
+}
+
 const output = join('out', `news-${story.id}.mp4`);
 console.log(`Notícia #${story.id}: "${story.title}"`);
 console.log(`Highlights do hook: ${highlights.join(' | ') || '(nenhum)'}`);
@@ -76,5 +115,20 @@ execFileSync(
   {cwd: root, stdio: 'inherit'},
 );
 
+const caption = [
+  story.title,
+  '',
+  detail.summary ?? '',
+  '',
+  `Apuração: ${story.independentSources} veículos independentes.`,
+  '',
+  'Siga @oagentico — o futuro da IA, todo dia, num clique.',
+  '',
+  '#inteligenciaartificial #ia #tecnologia #noticias',
+].join('\n');
+const captionFile = join('out', `news-${story.id}.caption.txt`);
+writeFileSync(join(root, captionFile), caption);
+
 console.log(`\nPronto: packages/video/${output}`);
+console.log(`Legenda: packages/video/${captionFile}\n\n${caption}\n`);
 console.log(`Publicar: opensocial post --to tiktok,instagram --text "${story.title}" --media packages/video/${output}`);

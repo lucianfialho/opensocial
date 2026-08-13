@@ -3,6 +3,7 @@ import {Composition, Still} from 'remotion';
 import {ArticleHighlight} from './ArticleHighlight';
 import {NewsReel, calculateNewsReelMetadata, newsReelSchema} from './NewsReel';
 import {PhotoCard, photoCardSchema} from './PhotoCard';
+import {ProfilePic, profilePicSchema} from './ProfilePic';
 import {TextArticle, textArticleSchema} from './TextArticle';
 
 const DEFAULT_PROPS = {
@@ -38,11 +39,20 @@ const NEWS_REEL_DEFAULTS = {
   ],
   brand: 'o agêntico',
   tagline: 'só o que duas fontes independentes confirmam',
+  narration: null,
 };
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Still
+        id="ProfilePic"
+        component={ProfilePic}
+        schema={profilePicSchema}
+        width={1080}
+        height={1080}
+        defaultProps={{letter: 'o', background: 'white', color: '#101013'}}
+      />
       <Still
         id="PhotoCard"
         component={PhotoCard}
