@@ -136,7 +136,7 @@ export const instagramAdapter: PlatformAdapter = {
           break
         } catch (err) {
           const retryable =
-            err instanceof ApiError && /invalid container id/.test(err.message) && attempt < 12
+            err instanceof ApiError && /invalid container id/.test(err.message) && attempt < 4
           if (!retryable) throw err
           await new Promise((r) => setTimeout(r, pollInterval() * 8))
         }

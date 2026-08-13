@@ -6,6 +6,7 @@
 // Usage: node scripts/news-carousel.mjs [--id=N | --index=0] [--mode=resumo|claims] [--chunk=0]
 // Writes slides + caption + manifest to out/carousel/.
 import {execFileSync} from 'node:child_process';
+import sharp from 'sharp';
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -119,6 +120,15 @@ cards.forEach((card, i) => {
   execFileSync('npx', ['remotion', 'still', 'PhotoCard', output, '--image-format=jpeg', '--timeout=120000', `--props=${JSON.stringify(card)}`], {cwd: root, stdio: 'inherit'});
   files.push(join(root, output));
 });
+
+// Normalize every card to a bog-standard sRGB baseline JPEG — Chrome's
+// screenshot JPEGs (bt470bg, no ICC) are suspected of tripping Instagram's
+// image ingestion (2207032 at publish).
+for (const file of files) {
+  const normalized = await sharp(file).withMetadata().jpeg({quality: 90, mozjpeg: true}).toBuffer();
+  writeFileSync(file, normalized);
+}
+console.log('cards normalizados (sRGB baseline JPEG via sharp)');
 
 const captionFile = join(root, 'out', 'carousel', `${slug}.caption.txt`);
 writeFileSync(captionFile, caption);

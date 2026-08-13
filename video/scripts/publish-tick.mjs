@@ -21,6 +21,7 @@ const REELS_PER_DAY = 4;
 const POSTS_PER_DAY = 6;
 const MIN_GAP_MINUTES = 50;
 const CLAIM_CHUNKS_PER_EVENT = 2;
+const CAROUSELS_ENABLED = false; // image publish (2207032) under investigation — each attempt costs ~17 API calls and re-triggers action blocks
 
 const dry = process.argv.includes('--dry');
 const force = process.argv.includes('--force');
@@ -83,9 +84,10 @@ if (!force && minutesSinceLast < MIN_GAP_MINUTES) {
 }
 
 // 3. pick the first eligible item
-const idx = state.queue.findIndex(
-  (item) => !(item.type === 'reel' && reelsToday >= REELS_PER_DAY),
-);
+const idx = state.queue.findIndex((item) => {
+  if (item.type === 'reel') return reelsToday < REELS_PER_DAY;
+  return CAROUSELS_ENABLED;
+});
 if (idx === -1) {
   log('fila vazia ou sem item elegível — encerrando.');
   process.exit(0);
@@ -129,6 +131,7 @@ try {
     process.exit(0);
   }
   // genuine item failure: send to the back, discard after 3 strikes
+  log(`erro do item: ${output.slice(-300)}`);
   state.queue.splice(idx, 1);
   if ((item.retries ?? 0) + 1 >= 3) {
     log(`item ${key} falhou 3x — descartado da fila. Saída: ${output.slice(-200)}`);
