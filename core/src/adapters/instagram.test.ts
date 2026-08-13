@@ -80,7 +80,8 @@ describe('publish', () => {
     )
     expect(String(calls[0].init?.body)).toContain('is_carousel_item=true')
     expect(String(calls[2].init?.body)).toContain('media_type=CAROUSEL')
-    expect(String(calls[2].init?.body)).toContain('children=A%2CB')
+    expect(String(calls[2].init?.body)).toContain('children%5B0%5D=A')
+    expect(String(calls[2].init?.body)).toContain('children%5B1%5D=B')
   })
 
   it('retries media_publish on a transient 500', async () => {

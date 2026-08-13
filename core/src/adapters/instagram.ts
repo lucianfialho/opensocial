@@ -19,12 +19,26 @@ function pollInterval(): number {
   return Number(process.env.OPENSOCIAL_POLL_INTERVAL_MS ?? 2000)
 }
 
-async function createContainer(accountId: string, token: string, params: Record<string, string>, fetchImpl: Fetch): Promise<string> {
-  const body = new URLSearchParams({ ...params, access_token: token })
+async function createContainer(
+  accountId: string,
+  token: string,
+  params: Record<string, string | string[]>,
+  fetchImpl: Fetch,
+): Promise<string> {
+  const body = new URLSearchParams({ access_token: token })
+  for (const [key, value] of Object.entries(params)) {
+    // array params (carousel children) must be sent as children[0], children[1]…
+    // — a comma-joined value in the form body silently yields container id "0"
+    if (Array.isArray(value)) value.forEach((item, i) => body.append(`${key}[${i}]`, item))
+    else body.set(key, value)
+  }
   const out = await json<{ id: string }>(
     await fetchImpl(`${GRAPH}/${API_VERSION}/${accountId}/media`, { method: 'POST', body }),
     'container creation',
   )
+  if (!out.id || out.id === '0') {
+    throw new ApiError('Instagram returned an invalid container id — check container params', 500)
+  }
   return out.id
 }
 
@@ -111,9 +125,22 @@ export const instagramAdapter: PlatformAdapter = {
       for (const m of post.media) {
         children.push(await createContainer(account.id, token, { image_url: m.url!, is_carousel_item: 'true' }, fetchImpl))
       }
-      creationId = await createContainer(account.id, token, {
-        media_type: 'CAROUSEL', children: children.join(','), caption: post.text,
-      }, fetchImpl)
+      // Fresh child containers make the CAROUSEL container silently return
+      // id "0" (their status reads FINISHED but they haven't settled — takes
+      // anywhere from seconds to ~3 minutes for 4-5 children). Retry patiently.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          creationId = await createContainer(account.id, token, {
+            media_type: 'CAROUSEL', children, caption: post.text,
+          }, fetchImpl)
+          break
+        } catch (err) {
+          const retryable =
+            err instanceof ApiError && /invalid container id/.test(err.message) && attempt < 12
+          if (!retryable) throw err
+          await new Promise((r) => setTimeout(r, pollInterval() * 8))
+        }
+      }
     }
 
     // Image/carousel containers can't be status-polled on this host, but may

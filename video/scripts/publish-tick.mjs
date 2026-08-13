@@ -115,7 +115,30 @@ if (dry) {
   log(`--dry: pulando publicação de ${media.length} arquivo(s).`);
   process.exit(0);
 }
-execFileSync('node', [cli, 'post', '--to', 'instagram', '--text', caption, '--media', ...media], {stdio: 'inherit'});
+try {
+  execFileSync('node', [cli, 'post', '--to', 'instagram', '--text', caption, '--media', ...media], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+  });
+} catch (err) {
+  const output = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+  if (output.includes('2207051') || output.includes('Application request limit')) {
+    // account/app action block — not the item's fault; keep it in place and
+    // let the next hourly tick try again after the block lifts
+    log('conta com action block (2207051) — item mantido, tentando na próxima hora.');
+    process.exit(0);
+  }
+  // genuine item failure: send to the back, discard after 3 strikes
+  state.queue.splice(idx, 1);
+  if ((item.retries ?? 0) + 1 >= 3) {
+    log(`item ${key} falhou 3x — descartado da fila. Saída: ${output.slice(-200)}`);
+  } else {
+    state.queue.push({...item, retries: (item.retries ?? 0) + 1});
+    log(`item ${key} falhou — movido pro fim da fila (tentativa ${(item.retries ?? 0) + 1}/3).`);
+  }
+  save();
+  process.exit(0);
+}
 
 state.queue.splice(idx, 1);
 state.published[key] = {day: today, type: item.type, at: new Date().toISOString(), title: item.title};
