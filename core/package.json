@@ -2,9 +2,16 @@
   "name": "@opensocial/core",
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "scripts": { "build": "tsc" },
-  "dependencies": { "aws4fetch": "^1.0.20" }
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.0",
+    "aws4fetch": "^1.0.20"
+  }
 }

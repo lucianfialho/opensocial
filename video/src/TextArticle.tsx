@@ -2,6 +2,7 @@ import React from 'react';
 import {z} from 'zod';
 import {ArticleMotion, useHighlightProgress} from './ArticleMotion';
 import {HighlightSpan} from './HighlightSpan';
+import {ImageWithCredit, type CreditedImage} from './ImageWithCredit';
 
 export const textArticleSchema = z.object({
   kicker: z.string(),
@@ -43,8 +44,12 @@ const segmentHeadline = (headline: string, phrases: string[]): Segment[] => {
   return segments;
 };
 
-const Highlighted: React.FC<{index: number; text: string}> = ({index, text}) => {
-  const progress = useHighlightProgress(index);
+const Highlighted: React.FC<{index: number; text: string; startAt?: number}> = ({
+  index,
+  text,
+  startAt,
+}) => {
+  const progress = useHighlightProgress(index, startAt);
   return (
     <HighlightSpan progress={progress} seed={42 + index}>
       {text}
@@ -52,16 +57,18 @@ const Highlighted: React.FC<{index: number; text: string}> = ({index, text}) => 
   );
 };
 
-const HeadlineWithHighlights: React.FC<{headline: string; highlights: string[]}> = ({
-  headline,
-  highlights,
-}) => {
+export const HeadlineWithHighlights: React.FC<{
+  headline: string;
+  highlights: string[];
+  fontSize?: number;
+  highlightStartAt?: number;
+}> = ({headline, highlights, fontSize = 58, highlightStartAt}) => {
   const segments = segmentHeadline(headline, highlights);
   return (
     <h1
       style={{
         fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 58,
+        fontSize,
         lineHeight: 1.3,
         fontWeight: 700,
         color: '#151515',
@@ -72,22 +79,21 @@ const HeadlineWithHighlights: React.FC<{headline: string; highlights: string[]}>
         seg.highlightIndex === null ? (
           <React.Fragment key={i}>{seg.text}</React.Fragment>
         ) : (
-          <Highlighted key={i} index={seg.highlightIndex} text={seg.text} />
+          <Highlighted key={i} index={seg.highlightIndex} text={seg.text} startAt={highlightStartAt} />
         ),
       )}
     </h1>
   );
 };
 
-export const TextArticle: React.FC<TextArticleProps> = ({
-  kicker,
-  headline,
-  highlights,
-  byline,
-  dateline,
-}) => {
+export const TextArticle: React.FC<
+  TextArticleProps & {
+    sweepDurationInFrames?: number;
+    image?: CreditedImage | null;
+  }
+> = ({kicker, headline, highlights, byline, dateline, sweepDurationInFrames, image}) => {
   return (
-    <ArticleMotion>
+    <ArticleMotion sweepDurationInFrames={sweepDurationInFrames}>
       <div
         style={{
           backgroundColor: 'white',
@@ -96,6 +102,7 @@ export const TextArticle: React.FC<TextArticleProps> = ({
             '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         }}
       >
+        {image ? <ImageWithCredit image={image} height={520} /> : null}
         <div
           style={{
             fontSize: 24,

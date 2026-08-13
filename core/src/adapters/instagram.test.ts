@@ -83,6 +83,22 @@ describe('publish', () => {
     expect(String(calls[2].init?.body)).toContain('children=A%2CB')
   })
 
+  it('retries media_publish on a transient 500', async () => {
+    process.env.OPENSOCIAL_POLL_INTERVAL_MS = '1'
+    const { fetch, calls } = sequenceFetch([
+      jsonResponse({ id: 'C9' }),
+      jsonResponse({ error: { message: 'unknown' } }, 500),
+      jsonResponse({ id: 'M9' }),
+      jsonResponse({ permalink: 'https://www.instagram.com/p/retry/' }),
+    ])
+    const out = await instagramAdapter.publish(
+      account, { text: 'cap', media: [{ kind: 'image', url: 'https://cdn/x.jpg' }] }, {}, fetch,
+    )
+    delete process.env.OPENSOCIAL_POLL_INTERVAL_MS
+    expect(calls.filter((c) => c.url.includes('media_publish'))).toHaveLength(2)
+    expect(out.id).toBe('M9')
+  })
+
   describe('reel', () => {
     beforeEach(() => {
       process.env.OPENSOCIAL_POLL_INTERVAL_MS = '1'

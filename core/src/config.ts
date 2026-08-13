@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import type { AppCredentials, Platform } from './types.js'
 import { ConfigError } from './errors.js'
 
-export interface MediaHostConfig {
+export interface S3MediaHostConfig {
+  provider?: 's3'
   endpoint: string
   region: string
   bucket: string
@@ -12,6 +13,13 @@ export interface MediaHostConfig {
   secretAccessKey: string
   publicBaseUrl: string
 }
+
+export interface VercelBlobMediaHostConfig {
+  provider: 'vercel-blob'
+  token: string
+}
+
+export type MediaHostConfig = S3MediaHostConfig | VercelBlobMediaHostConfig
 
 export interface AppConfig {
   instagram?: AppCredentials

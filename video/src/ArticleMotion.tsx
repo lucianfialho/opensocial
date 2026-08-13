@@ -18,9 +18,12 @@ export const DESIGN_WIDTH = 1280;
  * Left-to-right reveal progress (0..1) for the nth highlight. Highlights run
  * one after the other, starting right after the initial blur resolves.
  */
-export const useHighlightProgress = (index: number): number => {
+export const useHighlightProgress = (
+  index: number,
+  startAt: number = BLUR_DURATION_IN_FRAMES + 4,
+): number => {
   const frame = useCurrentFrame();
-  const start = BLUR_DURATION_IN_FRAMES + 4 + index * HIGHLIGHT_DURATION_IN_FRAMES;
+  const start = startAt + index * HIGHLIGHT_DURATION_IN_FRAMES;
   return interpolate(frame, [start, start + HIGHLIGHT_DURATION_IN_FRAMES], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
@@ -35,9 +38,13 @@ export const useHighlightProgress = (index: number): number => {
  */
 export const ArticleMotion: React.FC<{
   children: React.ReactNode;
-}> = ({children}) => {
+  /** Frames over which the zoom/rotation sweep runs. Defaults to the whole
+   * composition; scenes inside a <Series> pass their own length. */
+  sweepDurationInFrames?: number;
+}> = ({children, sweepDurationInFrames}) => {
   const frame = useCurrentFrame();
-  const {durationInFrames, width: compositionWidth} = useVideoConfig();
+  const {durationInFrames: compositionDuration, width: compositionWidth} = useVideoConfig();
+  const durationInFrames = sweepDurationInFrames ?? compositionDuration;
 
   // Fill up to 90% of the canvas width, but never upscale past the design
   // size (keeps the 16:9 look identical to the original).

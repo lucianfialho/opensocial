@@ -92,6 +92,7 @@ export const instagramAdapter: PlatformAdapter = {
       creationId = await createContainer(account.id, token, {
         media_type: 'REELS', video_url: post.media[0].url!, caption: post.text,
       }, fetchImpl)
+      // Only video containers support the status_code query on this host.
       const status = await pollUntil(
         async () => {
           const res = await fetchImpl(`${GRAPH}/${API_VERSION}/${creationId}?fields=status_code&access_token=${token}`)
@@ -115,16 +116,28 @@ export const instagramAdapter: PlatformAdapter = {
       }, fetchImpl)
     }
 
-    const published = await json<{ id: string }>(
-      await fetchImpl(`${GRAPH}/${API_VERSION}/${account.id}/media_publish`, {
-        method: 'POST', body: new URLSearchParams({ creation_id: creationId, access_token: token }),
-      }),
-      'media publish',
-    )
+    // Image/carousel containers can't be status-polled on this host, but may
+    // still be processing — retry an early media_publish 500 with backoff.
+    let published: { id: string } | null = null
+    for (let attempt = 0; ; attempt++) {
+      try {
+        published = await json<{ id: string }>(
+          await fetchImpl(`${GRAPH}/${API_VERSION}/${account.id}/media_publish`, {
+            method: 'POST', body: new URLSearchParams({ creation_id: creationId, access_token: token }),
+          }),
+          'media publish',
+        )
+        break
+      } catch (err) {
+        const retryable = err instanceof ApiError && err.status >= 500 && attempt < 3
+        if (!retryable) throw err
+        await new Promise((r) => setTimeout(r, pollInterval() * 3))
+      }
+    }
     const perma = await json<{ permalink?: string }>(
-      await fetchImpl(`${GRAPH}/${API_VERSION}/${published.id}?fields=permalink&access_token=${token}`),
+      await fetchImpl(`${GRAPH}/${API_VERSION}/${published!.id}?fields=permalink&access_token=${token}`),
       'permalink fetch',
     )
-    return { platform: 'instagram', id: published.id, url: perma.permalink }
+    return { platform: 'instagram', id: published!.id, url: perma.permalink }
   },
 }

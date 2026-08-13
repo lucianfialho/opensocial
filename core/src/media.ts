@@ -1,8 +1,9 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { basename } from 'node:path'
 import { AwsClient } from 'aws4fetch'
+import { put as blobPut, del as blobDel } from '@vercel/blob'
 import type { Fetch, IngestionMode, MediaItem, MediaKind, ResolvedMediaItem } from './types.js'
-import type { MediaHostConfig } from './config.js'
+import type { MediaHostConfig, S3MediaHostConfig } from './config.js'
 import { ApiError, ConfigError } from './errors.js'
 import { mediaKind } from './post.js'
 
@@ -10,9 +11,38 @@ export function isUrl(source: string): boolean {
   return /^https?:\/\//.test(source)
 }
 
-export class S3MediaHost {
+/** Anything that can host a local file at a public URL for platform ingestion. */
+export interface MediaHost {
+  upload(filePath: string): Promise<{ url: string; key: string }>
+  remove(key: string): Promise<void>
+}
+
+/** Vercel Blob host — `key` is the blob URL itself. */
+export class VercelBlobMediaHost implements MediaHost {
+  constructor(private token: string) {}
+
+  async upload(filePath: string): Promise<{ url: string; key: string }> {
+    const blob = await blobPut(
+      `opensocial/${Date.now()}-${basename(filePath)}`,
+      readFileSync(filePath),
+      { access: 'public', token: this.token },
+    )
+    return { url: blob.url, key: blob.url }
+  }
+
+  async remove(key: string): Promise<void> {
+    await blobDel(key, { token: this.token })
+  }
+}
+
+export function createMediaHost(cfg: MediaHostConfig, fetchImpl?: Fetch): MediaHost {
+  if (cfg.provider === 'vercel-blob') return new VercelBlobMediaHost(cfg.token)
+  return new S3MediaHost(cfg, fetchImpl)
+}
+
+export class S3MediaHost implements MediaHost {
   private aws: AwsClient
-  constructor(private cfg: MediaHostConfig, private fetchImpl: Fetch = globalThis.fetch) {
+  constructor(private cfg: S3MediaHostConfig, private fetchImpl: Fetch = globalThis.fetch) {
     this.aws = new AwsClient({
       accessKeyId: cfg.accessKeyId,
       secretAccessKey: cfg.secretAccessKey,
@@ -50,7 +80,7 @@ export class S3MediaHost {
 export async function resolveMedia(
   items: MediaItem[],
   ingestion: Record<MediaKind, IngestionMode>,
-  host: S3MediaHost | undefined,
+  host: MediaHost | undefined,
 ): Promise<{ media: ResolvedMediaItem[]; cleanup: () => Promise<void> }> {
   const media: ResolvedMediaItem[] = []
   const uploadedKeys: string[] = []

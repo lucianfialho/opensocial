@@ -4,7 +4,7 @@ import { adapters } from './adapter.js'
 import { effectivePost } from './post.js'
 import { getAccount, saveAccount } from './accounts.js'
 import { loadConfig, getAppCredentials } from './config.js'
-import { S3MediaHost, resolveMedia } from './media.js'
+import { createMediaHost, resolveMedia } from './media.js'
 
 export class ValidationError extends OpenSocialError {
   constructor(public issues: ValidationIssue[]) {
@@ -27,7 +27,7 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
   }
   if (issues.length > 0) throw new ValidationError(issues)
 
-  const host = config.mediaHost ? new S3MediaHost(config.mediaHost, fetchImpl) : undefined
+  const host = config.mediaHost ? createMediaHost(config.mediaHost, fetchImpl) : undefined
   const results: PlatformResult[] = []
 
   for (const p of platforms) {

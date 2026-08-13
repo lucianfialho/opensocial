@@ -15,7 +15,7 @@
     "react-dom": "^19.0.0",
     "remotion": "^4.0.0",
     "roughjs": "^4.6.6",
-    "zod": "^3.22.3"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/react": "^19.0.0"
