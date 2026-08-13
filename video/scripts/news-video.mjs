@@ -111,7 +111,7 @@ console.log(`Modo: ${mode} · Renderizando ${format} -> ${output}\n`);
 
 execFileSync(
   'npx',
-  ['remotion', 'render', format, output, `--props=${JSON.stringify(props)}`],
+  ['remotion', 'render', format, output, '--timeout=120000', `--props=${JSON.stringify(props)}`],
   {cwd: root, stdio: 'inherit'},
 );
 

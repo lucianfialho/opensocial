@@ -116,7 +116,7 @@ const files = [];
 cards.forEach((card, i) => {
   const output = join('out', 'carousel', `${slug}-slide-${i + 1}.jpg`);
   console.log(`rendering ${output}`);
-  execFileSync('npx', ['remotion', 'still', 'PhotoCard', output, '--image-format=jpeg', `--props=${JSON.stringify(card)}`], {cwd: root, stdio: 'inherit'});
+  execFileSync('npx', ['remotion', 'still', 'PhotoCard', output, '--image-format=jpeg', '--timeout=120000', `--props=${JSON.stringify(card)}`], {cwd: root, stdio: 'inherit'});
   files.push(join(root, output));
 });
 
