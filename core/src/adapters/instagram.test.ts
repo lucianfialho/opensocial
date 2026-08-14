@@ -61,9 +61,9 @@ describe('publish', () => {
     const out = await instagramAdapter.publish(
       account, { text: 'cap', media: [{ kind: 'image', url: 'https://cdn/x.jpg' }] }, {}, fetch,
     )
-    expect(calls[0].url).toBe('https://graph.instagram.com/v21.0/IGID/media')
+    expect(calls[0].url).toBe('https://graph.instagram.com/v23.0/IGID/media')
     expect(String(calls[0].init?.body)).toContain('image_url=')
-    expect(calls[1].url).toBe('https://graph.instagram.com/v21.0/IGID/media_publish')
+    expect(calls[1].url).toBe('https://graph.instagram.com/v23.0/IGID/media_publish')
     expect(out).toEqual({ platform: 'instagram', id: 'M1', url: 'https://www.instagram.com/p/xyz/' })
   })
 
