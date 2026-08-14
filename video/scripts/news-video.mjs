@@ -115,17 +115,11 @@ execFileSync(
   {cwd: root, stdio: 'inherit'},
 );
 
-const caption = [
-  story.title,
-  '',
-  detail.summary ?? '',
-  '',
-  `Apuração: ${story.independentSources} veículos independentes.`,
-  '',
-  'Siga @oagentico — o futuro da IA, todo dia, num clique.',
-  '',
-  '#inteligenciaartificial #ia #tecnologia #noticias',
-].join('\n');
+// CAPTION EXPERIMENT v1: the API publishes reels with EMPTY captions even
+// though we send them. Testing the simplest possible caption (single line,
+// no @/#/newlines/em-dash/emoji) via the regular ticks; if it sticks,
+// gradually reintroduce elements to find the killer.
+const caption = `${story.title}. Apuracao: ${story.independentSources} veiculos independentes. Siga o agentico para mais noticias de IA.`;
 const captionFile = join('out', `news-${story.id}.caption.txt`);
 writeFileSync(join(root, captionFile), caption);
 
