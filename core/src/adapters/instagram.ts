@@ -5,7 +5,7 @@ import { mediaKind } from '../post.js'
 import { pollUntil } from '../poll.js'
 
 const GRAPH = 'https://graph.instagram.com'
-const API_VERSION = 'v21.0'
+const API_VERSION = 'v23.0'
 
 async function json<T>(res: Response, context: string): Promise<T> {
   if (!res.ok) {
