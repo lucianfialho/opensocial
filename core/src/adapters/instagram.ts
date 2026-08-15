@@ -102,24 +102,31 @@ export const instagramAdapter: PlatformAdapter = {
     const token = account.accessToken
     let creationId: string
 
+    // Every container type (REELS, IMAGE, CAROUSEL) must reach FINISHED
+    // before media_publish — images included: publishing an image container
+    // too early fails with code 9007 / subcode 2207027 ("media not ready").
+    const awaitFinished = async (id: string, label: string) => {
+      const status = await pollUntil(
+        async () => {
+          const res = await fetchImpl(`${GRAPH}/${API_VERSION}/${id}?fields=status_code&access_token=${token}`)
+          return json<{ status_code: string }>(res, 'container status')
+        },
+        (s) => s.status_code !== 'IN_PROGRESS',
+        { intervalMs: pollInterval(), label },
+      )
+      if (status.status_code !== 'FINISHED') {
+        throw new MediaRejectedError(`Instagram rejected the media (status ${status.status_code}). Check format/size/aspect-ratio limits.`)
+      }
+    }
+
     if (post.media.length === 1 && post.media[0].kind === 'video') {
       creationId = await createContainer(account.id, token, {
         media_type: 'REELS', video_url: post.media[0].url!, caption: post.text,
       }, fetchImpl)
-      // Only video containers support the status_code query on this host.
-      const status = await pollUntil(
-        async () => {
-          const res = await fetchImpl(`${GRAPH}/${API_VERSION}/${creationId}?fields=status_code&access_token=${token}`)
-          return json<{ status_code: string }>(res, 'container status')
-        },
-        (s) => s.status_code !== 'IN_PROGRESS',
-        { intervalMs: pollInterval(), label: 'instagram video processing' },
-      )
-      if (status.status_code !== 'FINISHED') {
-        throw new MediaRejectedError(`Instagram rejected the video (status ${status.status_code}). Check format/duration/aspect-ratio limits for Reels.`)
-      }
+      await awaitFinished(creationId, 'instagram video processing')
     } else if (post.media.length === 1) {
       creationId = await createContainer(account.id, token, { image_url: post.media[0].url!, caption: post.text }, fetchImpl)
+      await awaitFinished(creationId, 'instagram image processing')
     } else {
       const children: string[] = []
       for (const m of post.media) {
@@ -141,10 +148,11 @@ export const instagramAdapter: PlatformAdapter = {
           await new Promise((r) => setTimeout(r, pollInterval() * 8))
         }
       }
+      await awaitFinished(creationId, 'instagram carousel processing')
     }
 
-    // Image/carousel containers can't be status-polled on this host, but may
-    // still be processing — retry an early media_publish 500 with backoff.
+    // Belt and suspenders: even a FINISHED container can briefly report
+    // "media not ready" (9007/2207027) — retry that and transient 500s.
     let published: { id: string } | null = null
     for (let attempt = 0; ; attempt++) {
       try {
@@ -156,7 +164,10 @@ export const instagramAdapter: PlatformAdapter = {
         )
         break
       } catch (err) {
-        const retryable = err instanceof ApiError && err.status >= 500 && attempt < 3
+        const retryable =
+          err instanceof ApiError &&
+          (err.status >= 500 || /2207027|not available/i.test(err.message)) &&
+          attempt < 3
         if (!retryable) throw err
         await new Promise((r) => setTimeout(r, pollInterval() * 3))
       }

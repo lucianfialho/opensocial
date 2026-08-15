@@ -21,7 +21,7 @@ const REELS_PER_DAY = 4;
 const POSTS_PER_DAY = 6;
 const MIN_GAP_MINUTES = 50;
 const CLAIM_CHUNKS_PER_EVENT = 2;
-const CAROUSELS_ENABLED = false; // image publish (2207032) under investigation — each attempt costs ~17 API calls and re-triggers action blocks
+const CAROUSELS_ENABLED = true; // unblocked 15/ago: image containers need a status poll before publish (2207027)
 
 const dry = process.argv.includes('--dry');
 const force = process.argv.includes('--force');

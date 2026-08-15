@@ -51,10 +51,17 @@ describe('validate', () => {
 
 describe('publish', () => {
   const account = { platform: 'instagram' as const, id: 'IGID', username: 'u', accessToken: 'TOK' }
+  beforeEach(() => {
+    process.env.OPENSOCIAL_POLL_INTERVAL_MS = '1'
+  })
+  afterEach(() => {
+    delete process.env.OPENSOCIAL_POLL_INTERVAL_MS
+  })
 
-  it('single image: container -> publish -> permalink', async () => {
+  it('single image: container -> status poll -> publish -> permalink', async () => {
     const { fetch, calls } = sequenceFetch([
       jsonResponse({ id: 'C1' }),
+      jsonResponse({ status_code: 'FINISHED' }),
       jsonResponse({ id: 'M1' }),
       jsonResponse({ permalink: 'https://www.instagram.com/p/xyz/' }),
     ])
@@ -63,14 +70,17 @@ describe('publish', () => {
     )
     expect(calls[0].url).toBe('https://graph.instagram.com/v23.0/IGID/media')
     expect(String(calls[0].init?.body)).toContain('image_url=')
-    expect(calls[1].url).toBe('https://graph.instagram.com/v23.0/IGID/media_publish')
+    expect(calls[1].url).toContain('fields=status_code')
+    expect(calls[2].url).toBe('https://graph.instagram.com/v23.0/IGID/media_publish')
     expect(out).toEqual({ platform: 'instagram', id: 'M1', url: 'https://www.instagram.com/p/xyz/' })
   })
 
-  it('carousel: child containers then carousel container', async () => {
+  it('carousel: child containers, carousel container, status poll', async () => {
     const { fetch, calls } = sequenceFetch([
       jsonResponse({ id: 'A' }), jsonResponse({ id: 'B' }),
-      jsonResponse({ id: 'CAR' }), jsonResponse({ id: 'M2' }),
+      jsonResponse({ id: 'CAR' }),
+      jsonResponse({ status_code: 'FINISHED' }),
+      jsonResponse({ id: 'M2' }),
       jsonResponse({ permalink: 'https://www.instagram.com/p/car/' }),
     ])
     await instagramAdapter.publish(
@@ -82,20 +92,20 @@ describe('publish', () => {
     expect(String(calls[2].init?.body)).toContain('media_type=CAROUSEL')
     expect(String(calls[2].init?.body)).toContain('children%5B0%5D=A')
     expect(String(calls[2].init?.body)).toContain('children%5B1%5D=B')
+    expect(calls[3].url).toContain('fields=status_code')
   })
 
-  it('retries media_publish on a transient 500', async () => {
-    process.env.OPENSOCIAL_POLL_INTERVAL_MS = '1'
+  it('retries media_publish on "media not ready" (2207027)', async () => {
     const { fetch, calls } = sequenceFetch([
       jsonResponse({ id: 'C9' }),
-      jsonResponse({ error: { message: 'unknown' } }, 500),
+      jsonResponse({ status_code: 'FINISHED' }),
+      jsonResponse({ error: { message: 'Media ID is not available', code: 9007, error_subcode: 2207027 } }, 400),
       jsonResponse({ id: 'M9' }),
       jsonResponse({ permalink: 'https://www.instagram.com/p/retry/' }),
     ])
     const out = await instagramAdapter.publish(
       account, { text: 'cap', media: [{ kind: 'image', url: 'https://cdn/x.jpg' }] }, {}, fetch,
     )
-    delete process.env.OPENSOCIAL_POLL_INTERVAL_MS
     expect(calls.filter((c) => c.url.includes('media_publish'))).toHaveLength(2)
     expect(out.id).toBe('M9')
   })
