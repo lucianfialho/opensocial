@@ -18,10 +18,13 @@ export const CaptionOverlay: React.FC<{
   clip: Clip;
   /** From this frame on the text renders white (dark closing background). */
   whiteFromFrame?: number;
-}> = ({clip, whiteFromFrame}) => {
+  /** Override the distance from the bottom edge (px at 1920 height). */
+  bottom?: number;
+}> = ({clip, whiteFromFrame, bottom}) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
-  const captionBottom = useCaptionBottom();
+  const {fps, height} = useVideoConfig();
+  const defaultBottom = useCaptionBottom();
+  const captionBottom = bottom !== undefined ? bottom * (height / 1920) : defaultBottom;
   const words = clip?.words;
   if (!words || words.length === 0) return null;
 

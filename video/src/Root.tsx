@@ -2,6 +2,7 @@ import React from 'react';
 import {Composition, Still} from 'remotion';
 import {ArticleHighlight} from './ArticleHighlight';
 import {NewsReel, calculateNewsReelMetadata, newsReelSchema} from './NewsReel';
+import {NewsSplit, calculateNewsSplitMetadata, newsSplitSchema} from './NewsSplit';
 import {PhotoCard, photoCardSchema} from './PhotoCard';
 import {ProfilePic, profilePicSchema} from './ProfilePic';
 import {TextArticle, textArticleSchema} from './TextArticle';
@@ -90,6 +91,26 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1350}
         defaultProps={NEWS_REEL_DEFAULTS}
+      />
+      <Composition
+        id="NewsSplit"
+        component={NewsSplit}
+        schema={newsSplitSchema}
+        calculateMetadata={calculateNewsSplitMetadata}
+        durationInFrames={600}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          kicker: 'IA & Tech',
+          headline: 'Manchete de exemplo para o formato meia tela',
+          highlights: [],
+          dateline: '15 de agosto de 2026 / o agêntico',
+          independentSources: 4,
+          image: null,
+          personaSrc: 'persona/example.mp4',
+          clip: {src: 'audio/example.mp3', durationInFrames: 600, words: null},
+        }}
       />
       <Composition
         id="ArticleHighlight"
