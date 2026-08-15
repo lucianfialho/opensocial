@@ -85,7 +85,7 @@ if (!force && minutesSinceLast < MIN_GAP_MINUTES) {
 
 // 3. pick the first eligible item
 const idx = state.queue.findIndex((item) => {
-  if (item.type === 'reel') return reelsToday < REELS_PER_DAY;
+  if (item.type === 'reel') return force || reelsToday < REELS_PER_DAY;
   return CAROUSELS_ENABLED;
 });
 if (idx === -1) {
