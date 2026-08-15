@@ -18,10 +18,12 @@ const CELL_Y = 240;
  * plus the @handle pinned at the top of the reel-safe band. Sits above
  * the scenes and below the captions.
  */
-export const Watermark: React.FC<{handle: string; whiteFromFrame: number}> = ({
-  handle,
-  whiteFromFrame,
-}) => {
+export const Watermark: React.FC<{
+  handle: string;
+  whiteFromFrame: number;
+  /** Handle vertical position (px at 1920 height); default: top safe band. */
+  handleTop?: number;
+}> = ({handle, whiteFromFrame, handleTop}) => {
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const scale = height / 1920;
@@ -67,7 +69,7 @@ export const Watermark: React.FC<{handle: string; whiteFromFrame: number}> = ({
       <div
         style={{
           position: 'absolute',
-          top: (REEL_SAFE_ZONE.top + 24) * scale,
+          top: (handleTop ?? REEL_SAFE_ZONE.top + 24) * scale,
           width: '100%',
           textAlign: 'center',
           fontFamily: 'Parkinsans, sans-serif',

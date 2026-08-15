@@ -93,7 +93,8 @@ export const NewsSplit: React.FC<NewsSplitProps> = (props) => {
           objectFit: 'cover',
         }}
       />
-      <Watermark handle="@oagentico" whiteFromFrame={Number.MAX_SAFE_INTEGER} />
+      {/* handle sits on the seam between the slider and the reporter */}
+      <Watermark handle="@oagentico" whiteFromFrame={Number.MAX_SAFE_INTEGER} handleTop={932} />
       {narration ? (
         <>
           <Audio src={staticFile(narration.clip.src)} />
