@@ -12,6 +12,10 @@ import {personaClip} from './magnific.mjs';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API = 'https://oagentico.com.br/api/v1';
 
+// The on-screen reporter is one person, so her voice never rotates:
+// Roberta, always (overrides the tts.mjs reporter pool).
+process.env.ELEVENLABS_VOICE_ID = 'RGymW84CSmfVugnA5tvA';
+
 let token = process.env.OAGENTICO_TOKEN;
 if (!token && existsSync(join(root, '.env'))) {
   token = readFileSync(join(root, '.env'), 'utf8').match(/OAGENTICO_TOKEN=(.+)/)?.[1]?.trim();
