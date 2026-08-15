@@ -20,7 +20,9 @@ export const CaptionOverlay: React.FC<{
   whiteFromFrame?: number;
   /** Override the distance from the bottom edge (px at 1920 height). */
   bottom?: number;
-}> = ({clip, whiteFromFrame, bottom}) => {
+  /** Draw each word on the brand-yellow marker chip (for busy backgrounds). */
+  chip?: boolean;
+}> = ({clip, whiteFromFrame, bottom, chip}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const defaultBottom = useCaptionBottom();
@@ -60,6 +62,14 @@ export const CaptionOverlay: React.FC<{
           maxWidth: '92%',
           whiteSpace: 'nowrap',
           textAlign: 'center',
+          ...(chip
+            ? {
+                color: '#101013',
+                backgroundColor: '#ffe234',
+                padding: '6px 26px',
+                borderRadius: 14,
+              }
+            : {}),
         }}
       >
         {word.text}

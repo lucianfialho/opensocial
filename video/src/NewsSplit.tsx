@@ -77,7 +77,7 @@ export const NewsSplit: React.FC<NewsSplitProps> = (props) => {
       <Watermark handle="@oagentico" whiteFromFrame={Number.MAX_SAFE_INTEGER} />
       <Audio src={staticFile(clip.src)} />
       {/* caption rides the seam between the card and the studio, clear of her face */}
-      <CaptionOverlay clip={clip} whiteFromFrame={Number.MAX_SAFE_INTEGER} bottom={790} />
+      <CaptionOverlay clip={clip} whiteFromFrame={Number.MAX_SAFE_INTEGER} bottom={790} chip />
     </AbsoluteFill>
   );
 };
