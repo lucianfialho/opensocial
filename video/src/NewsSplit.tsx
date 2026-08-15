@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {CaptionOverlay} from './CaptionOverlay';
 import {Watermark} from './Watermark';
 import {narrationSchema, sceneDurations} from './narration';
-import {SplitHook, SplitClaim, SplitSources, SplitClosing} from './SplitScenes';
+import {SplitImage, SplitClosing} from './SplitScenes';
 
 const imageSchema = z.object({url: z.string(), credit: z.string()});
 
@@ -46,38 +46,34 @@ export const calculateNewsSplitMetadata: CalculateMetadataFunction<NewsSplitProp
  * like NewsReel), the o agêntico reporter lip-syncing below.
  */
 export const NewsSplit: React.FC<NewsSplitProps> = (props) => {
-  const {kicker, headline, highlights, dateline, independentSources, image} = props;
-  const {claims, sources, brand, tagline, personaSrc, narration} = props;
+  const {image, claims, brand, tagline, personaSrc, narration} = props;
   const shownClaims = claims.slice(0, MAX_CLAIMS);
   const durations = sceneDurations(shownClaims.length, narration);
+  const fallback = image ?? shownClaims.find((c) => c.image)?.image ?? null;
   return (
     <AbsoluteFill style={{backgroundColor: 'white'}}>
       <div style={{position: 'absolute', top: 0, width: '100%', height: '50%', overflow: 'hidden'}}>
         <Series>
           <Series.Sequence durationInFrames={durations.hook}>
-            <SplitHook
-              kicker={kicker}
-              headline={headline}
-              highlights={highlights}
-              dateline={dateline}
-              independentSources={independentSources}
-              image={image}
-            />
+            {fallback ? (
+              <SplitImage image={fallback} zoom="in" />
+            ) : (
+              <SplitClosing brand={brand} tagline={tagline} />
+            )}
           </Series.Sequence>
-          {shownClaims.map((claim, i) => (
-            <Series.Sequence key={i} durationInFrames={durations.claims[i]}>
-              <SplitClaim
-                label={claim.label}
-                texto={claim.texto}
-                image={claim.image}
-                direction={i % 2 === 0 ? 'right' : 'left'}
-              />
-            </Series.Sequence>
-          ))}
-          <Series.Sequence durationInFrames={durations.sources}>
-            <SplitSources independentSources={independentSources} sources={sources} />
-          </Series.Sequence>
-          <Series.Sequence durationInFrames={durations.closing}>
+          {shownClaims.map((claim, i) => {
+            const sceneImage = claim.image ?? fallback;
+            return (
+              <Series.Sequence key={i} durationInFrames={durations.claims[i]}>
+                {sceneImage ? (
+                  <SplitImage image={sceneImage} zoom={i % 2 === 0 ? 'out' : 'in'} />
+                ) : (
+                  <SplitClosing brand={brand} tagline={tagline} />
+                )}
+              </Series.Sequence>
+            );
+          })}
+          <Series.Sequence durationInFrames={durations.sources + durations.closing}>
             <SplitClosing brand={brand} tagline={tagline} />
           </Series.Sequence>
         </Series>
