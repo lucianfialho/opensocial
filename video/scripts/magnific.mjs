@@ -15,7 +15,7 @@ const CLI_CANDIDATES = [
 ].filter(Boolean);
 const CLI = CLI_CANDIDATES.find((p) => existsSync(p)) ?? CLI_CANDIDATES[0];
 
-// The reporter pose creation (bancada branca, mic com o cubo do "o").
+// Fallback pose: Roberta at the news desk (mic com o cubo do "o").
 export const POSE_CREATION = 'vQFjkHka47';
 
 function call(tool, args) {
@@ -60,10 +60,10 @@ function waitCreation(identifier, {tries = 30, delayMs = 20_000} = {}) {
  * Lip-sync clip of the reporter speaking `audioPath`, cached in
  * public/persona by audio content hash. Returns the staticFile-relative path.
  */
-export async function personaClip(eventId, audioPath) {
+export async function personaClip(eventId, audioPath, pose = POSE_CREATION) {
   mkdirSync(join(root, 'public', 'persona'), {recursive: true});
   const hash = createHash('md5').update(readFileSync(audioPath)).digest('hex').slice(0, 8);
-  const rel = `persona/news-${eventId}-${hash}.mp4`;
+  const rel = `persona/news-${eventId}-${pose}-${hash}.mp4`;
   const abs = join(root, 'public', rel);
   if (existsSync(abs)) return rel;
 
@@ -71,7 +71,7 @@ export async function personaClip(eventId, audioPath) {
   const audioId = await uploadAudio(audioPath);
   console.log('magnific: gerando lip-sync (veed-fabric)');
   const speak = call('video_speak', {
-    imageUrl: POSE_CREATION,
+    imageUrl: pose,
     audioUrl: audioId,
     mode: 'veed-fabric-1.0',
     resolution: '720p',

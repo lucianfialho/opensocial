@@ -15,10 +15,12 @@ const TEMPO = 1.25; // ffmpeg atempo on top → 1.2 × 1.25 = 1.5x effective
 const MODEL = 'eleven_v3';
 // The reporter pool: three native pt-BR voices, rotated per event so each
 // story keeps a consistent voice across re-renders (cache-friendly).
+// `pose` is the Magnific creation of each reporter at the news desk —
+// voice and face always travel together.
 const REPORTERS = [
-  {id: 'Qrdut83w0Cr152Yb4Xn3', name: 'Paulo'},
-  {id: 'cyD08lEy76q03ER1jZ7y', name: 'Scheila'},
-  {id: 'RGymW84CSmfVugnA5tvA', name: 'Roberta'},
+  {id: 'Qrdut83w0Cr152Yb4Xn3', name: 'Paulo', pose: 'MBouBmIDCm'},
+  {id: 'cyD08lEy76q03ER1jZ7y', name: 'Scheila', pose: 'lJO2JNagv9'},
+  {id: 'RGymW84CSmfVugnA5tvA', name: 'Roberta', pose: 'vQFjkHka47'},
 ];
 const PRONUNCIATION_DICTIONARY = {
   pronunciation_dictionary_id: 'OtVajeC5RdDnSY4sMZgk',
@@ -32,11 +34,12 @@ export const envValue = (name) => {
   return readFileSync(envFile, 'utf8').match(new RegExp(`${name}=(.+)`))?.[1]?.trim();
 };
 
-const voiceFor = (eventId) => {
+export const reporterFor = (eventId) => {
   const forced = envValue('ELEVENLABS_VOICE_ID');
-  if (forced) return {id: forced, name: 'custom'};
+  if (forced) return {id: forced, name: 'custom', pose: undefined};
   return REPORTERS[Number(eventId) % REPORTERS.length];
 };
+const voiceFor = reporterFor;
 
 /** with-timestamps: audio + per-character alignment → per-word timings. */
 async function tts(text, outPath, apiKey, voice) {

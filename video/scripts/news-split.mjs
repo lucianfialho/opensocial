@@ -12,10 +12,6 @@ import {personaClip} from './magnific.mjs';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API = 'https://oagentico.com.br/api/v1';
 
-// The on-screen reporter is one person, so her voice never rotates:
-// Roberta, always (overrides the tts.mjs reporter pool).
-process.env.ELEVENLABS_VOICE_ID = 'RGymW84CSmfVugnA5tvA';
-
 let token = process.env.OAGENTICO_TOKEN;
 if (!token && existsSync(join(root, '.env'))) {
   token = readFileSync(join(root, '.env'), 'utf8').match(/OAGENTICO_TOKEN=(.+)/)?.[1]?.trim();
@@ -56,7 +52,7 @@ const {dados: detail} = await get(`/eventos/${story.id}`);
 const highlights = pickHighlights(story.title, detail.claims ?? []);
 const reelProps = buildReelProps({story, detail, highlights, mode: 'resumo'});
 
-const {narrateContinuous, sentenceCuts, envValue} = await import('./tts.mjs');
+const {narrateContinuous, sentenceCuts, envValue, reporterFor} = await import('./tts.mjs');
 const elevenKey = envValue('ELEVENLABS_API_KEY');
 if (!elevenKey) {
   console.error('NewsSplit precisa de narração: configure ELEVENLABS_API_KEY.');
@@ -71,7 +67,9 @@ const cuts = sentenceCuts(clip, allTexts);
 const ctaFrames = cuts[cuts.length - 1] + 10;
 const sourcesFrames = Math.min(55, Math.round(ctaFrames * 0.45));
 
-const personaSrc = await personaClip(story.id, join(root, 'public', clip.src));
+const reporter = reporterFor(story.id);
+console.log(`repórter desta notícia: ${reporter.name}`);
+const personaSrc = await personaClip(story.id, join(root, 'public', clip.src), reporter.pose);
 
 const props = {
   kicker: reelProps.kicker,
