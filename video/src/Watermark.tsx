@@ -78,7 +78,9 @@ export const Watermark: React.FC<{
           color: white ? '#fff' : '#000',
         }}
       >
-        {handle}
+        {/* Gofar has no @ glyph — it would render as a blank box that
+            shoves the visible ink off-center, so the wordmark drops it */}
+        {handle.replace(/@/g, '')}
       </div>
     </AbsoluteFill>
   );

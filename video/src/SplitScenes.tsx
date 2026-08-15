@@ -94,7 +94,8 @@ export const SplitClosing: React.FC<{brand: string; tagline: string}> = ({
         color: '#101013',
       }}
     >
-      {brand}
+      {/* wordmark: the brand name collapses into one word, like the logo */}
+      {brand.replace(/\s+/g, '')}
     </div>
     <div
       style={{

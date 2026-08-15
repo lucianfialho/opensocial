@@ -114,7 +114,7 @@ export const RemotionRoot: React.FC = () => {
           sources: [{name: 'Veículo Um', date: '15 ago', favicon: null}],
           brand: 'o agêntico',
           tagline: 'o futuro da IA, todo dia, num clique',
-          personaSrc: 'persona/example.mp4',
+          personaSrc: 'persona/news-1709-7292732b.mp4',
           narration: null,
         }}
       />
