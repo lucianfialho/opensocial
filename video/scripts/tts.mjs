@@ -11,7 +11,7 @@ import {fileURLToPath} from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 30;
 const SPEED = 1.2; // ElevenLabs API cap
-const TEMPO = 1.1667; // ffmpeg atempo on top → 1.2 × 1.1667 ≈ 1.4x effective
+const TEMPO = 1.25; // ffmpeg atempo on top → 1.2 × 1.25 = 1.5x effective
 const MODEL = 'eleven_v3';
 // The reporter pool: three native pt-BR voices, rotated per event so each
 // story keeps a consistent voice across re-renders (cache-friendly).

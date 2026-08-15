@@ -5,6 +5,7 @@ import {z} from 'zod';
 import {CaptionOverlay} from './CaptionOverlay';
 import {TextArticle} from './TextArticle';
 import {narrationSchema, sceneDurations} from './narration';
+import {Watermark} from './Watermark';
 import {ClaimScene} from './scenes/ClaimScene';
 import {SourcesScene} from './scenes/SourcesScene';
 import {ClosingScene} from './scenes/ClosingScene';
@@ -53,6 +54,8 @@ export const NewsReel: React.FC<NewsReelProps> = (props) => {
   const {claims, sources, brand, tagline, narration} = props;
   const shownClaims = claims.slice(0, MAX_CLAIMS);
   const durations = sceneDurations(shownClaims.length, narration);
+  const closingStart =
+    durations.hook + durations.claims.reduce((a, b) => a + b, 0) + durations.sources;
   return (
     <AbsoluteFill>
       <Series>
@@ -91,18 +94,12 @@ export const NewsReel: React.FC<NewsReelProps> = (props) => {
           <ClosingScene brand={brand} tagline={tagline} image={image} durationInFrames={durations.closing} />
         </Series.Sequence>
       </Series>
+      <Watermark handle="@oagentico" whiteFromFrame={closingStart} />
       {/* continuous voice + global word-by-word caption on top of every scene */}
       {narration ? (
         <>
           <Audio src={staticFile(narration.clip.src)} />
-          <CaptionOverlay
-            clip={narration.clip}
-            whiteFromFrame={
-              durations.hook +
-              durations.claims.reduce((a, b) => a + b, 0) +
-              durations.sources
-            }
-          />
+          <CaptionOverlay clip={narration.clip} whiteFromFrame={closingStart} />
         </>
       ) : null}
     </AbsoluteFill>
