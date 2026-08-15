@@ -85,24 +85,43 @@ export const SplitClosing: React.FC<{brand: string; tagline: string}> = ({
       fontFamily: FONT_UI,
     }}
   >
-    <div style={{fontFamily: '"Gofar Serif", Georgia, serif', fontSize: 120, color: '#101013'}}>
+    <div
+      style={{
+        width: '100%',
+        textAlign: 'center',
+        fontFamily: '"Gofar Serif", Georgia, serif',
+        fontSize: 120,
+        color: '#101013',
+      }}
+    >
       {brand}
-    </div>
-    <div style={{fontSize: 32, color: '#555', marginTop: 14, letterSpacing: 2}}>
-      {tagline}
     </div>
     <div
       style={{
-        marginTop: 34,
+        width: '100%',
+        textAlign: 'center',
         fontSize: 32,
-        fontWeight: 700,
-        backgroundColor: '#101013',
-        color: 'white',
-        padding: '16px 34px',
-        borderRadius: 44,
+        color: '#555',
+        marginTop: 14,
+        letterSpacing: 2,
       }}
     >
-      Siga @oagentico
+      {tagline}
+    </div>
+    <div style={{width: '100%', textAlign: 'center', marginTop: 34}}>
+      <span
+        style={{
+          display: 'inline-block',
+          fontSize: 32,
+          fontWeight: 700,
+          backgroundColor: '#101013',
+          color: 'white',
+          padding: '16px 34px',
+          borderRadius: 44,
+        }}
+      >
+        Siga @oagentico
+      </span>
     </div>
   </AbsoluteFill>
 );

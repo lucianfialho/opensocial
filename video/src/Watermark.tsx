@@ -72,10 +72,9 @@ export const Watermark: React.FC<{
           top: (handleTop ?? REEL_SAFE_ZONE.top + 24) * scale,
           width: '100%',
           textAlign: 'center',
-          fontFamily: 'Parkinsans, sans-serif',
-          fontWeight: 800,
-          fontSize: 38 * scale,
-          letterSpacing: 4,
+          fontFamily: '"Gofar Serif", Georgia, serif',
+          fontSize: 46 * scale,
+          letterSpacing: 1,
           color: white ? '#fff' : '#000',
         }}
       >
