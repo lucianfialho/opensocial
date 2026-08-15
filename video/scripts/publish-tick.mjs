@@ -100,9 +100,9 @@ log(`publicando ${key} — ${item.title}`);
 let media;
 let caption;
 if (item.type === 'reel') {
-  execFileSync('node', ['scripts/news-video.mjs', `--id=${item.id}`], {cwd: root, stdio: 'inherit'});
-  media = [join(root, 'out', `news-${item.id}.mp4`)];
-  caption = readFileSync(join(root, 'out', `news-${item.id}.caption.txt`), 'utf8');
+  execFileSync('node', ['scripts/news-split.mjs', `--id=${item.id}`], {cwd: root, stdio: 'inherit'});
+  media = [join(root, 'out', `split-${item.id}.mp4`)];
+  caption = readFileSync(join(root, 'out', `split-${item.id}.caption.txt`), 'utf8');
 } else {
   const cargs = ['scripts/news-carousel.mjs', `--id=${item.id}`, `--mode=${item.mode}`];
   if (item.mode === 'claims') cargs.push(`--chunk=${item.chunk}`);

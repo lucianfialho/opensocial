@@ -8,9 +8,12 @@ import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const CLI =
-  process.env.MAGNIFIC_CLI ??
-  '/Users/lucianfialho/orca/magnific-cli-anything/.venv/bin/cli-anything-magnific';
+const CLI_CANDIDATES = [
+  process.env.MAGNIFIC_CLI,
+  '/Users/lucianfialho/orca/magnific-cli-anything/.venv/bin/cli-anything-magnific',
+  `${process.env.HOME}/Code/magnific-cli-anything/.venv/bin/cli-anything-magnific`,
+].filter(Boolean);
+const CLI = CLI_CANDIDATES.find((p) => existsSync(p)) ?? CLI_CANDIDATES[0];
 
 // The reporter pose creation (bancada branca, mic com o cubo do "o").
 export const POSE_CREATION = 'vQFjkHka47';
