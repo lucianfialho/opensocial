@@ -52,7 +52,7 @@ const {dados: detail} = await get(`/eventos/${story.id}`);
 const highlights = pickHighlights(story.title, detail.claims ?? []);
 const reelProps = buildReelProps({story, detail, highlights, mode: 'resumo'});
 
-const {narrateContinuous, envValue} = await import('./tts.mjs');
+const {narrateContinuous, sentenceCuts, envValue} = await import('./tts.mjs');
 const elevenKey = envValue('ELEVENLABS_API_KEY');
 if (!elevenKey) {
   console.error('NewsSplit precisa de narração: configure ELEVENLABS_API_KEY.');
@@ -61,7 +61,11 @@ if (!elevenKey) {
 const hookText = story.title.endsWith('.') ? story.title : `${story.title}.`;
 const sceneTexts = reelProps.claims.map((c) => c.texto);
 const ctaText = 'Siga o agêntico. O futuro da IA, todo dia, num clique.';
-const clip = await narrateContinuous(story.id, [hookText, ...sceneTexts, ctaText].join(' '), elevenKey);
+const allTexts = [hookText, ...sceneTexts, ctaText];
+const clip = await narrateContinuous(story.id, allTexts.join(' '), elevenKey);
+const cuts = sentenceCuts(clip, allTexts);
+const ctaFrames = cuts[cuts.length - 1] + 10;
+const sourcesFrames = Math.min(55, Math.round(ctaFrames * 0.45));
 
 const personaSrc = await personaClip(story.id, join(root, 'public', clip.src));
 
@@ -72,8 +76,20 @@ const props = {
   dateline: reelProps.dateline,
   independentSources: reelProps.independentSources,
   image: reelProps.image,
+  claims: reelProps.claims.map((c) => ({label: c.label, texto: c.texto, image: c.image})),
+  sources: reelProps.sources,
+  brand: reelProps.brand,
+  tagline: reelProps.tagline,
   personaSrc,
-  clip,
+  narration: {
+    clip,
+    cuts: {
+      hook: cuts[0],
+      claims: cuts.slice(1, -1),
+      sources: sourcesFrames,
+      closing: ctaFrames - sourcesFrames,
+    },
+  },
 };
 
 const output = join('out', `split-${story.id}.mp4`);

@@ -108,8 +108,14 @@ export const RemotionRoot: React.FC = () => {
           dateline: '15 de agosto de 2026 / o agêntico',
           independentSources: 4,
           image: null,
+          claims: [
+            {label: 'Em resumo · 1/1', texto: 'Frase de exemplo do resumo.', image: null},
+          ],
+          sources: [{name: 'Veículo Um', date: '15 ago', favicon: null}],
+          brand: 'o agêntico',
+          tagline: 'o futuro da IA, todo dia, num clique',
           personaSrc: 'persona/example.mp4',
-          clip: {src: 'audio/example.mp3', durationInFrames: 600, words: null},
+          narration: null,
         }}
       />
       <Composition

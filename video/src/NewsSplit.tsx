@@ -1,12 +1,13 @@
 import React from 'react';
-import {AbsoluteFill, Audio, OffthreadVideo, staticFile} from 'remotion';
+import {AbsoluteFill, Audio, OffthreadVideo, Series, staticFile} from 'remotion';
 import type {CalculateMetadataFunction} from 'remotion';
 import {z} from 'zod';
 import {CaptionOverlay} from './CaptionOverlay';
-import {HeadlineWithHighlights} from './TextArticle';
-import {ImageWithCredit} from './ImageWithCredit';
 import {Watermark} from './Watermark';
-import {audioClipSchema} from './narration';
+import {narrationSchema, sceneDurations} from './narration';
+import {SplitHook, SplitClaim, SplitSources, SplitClosing} from './SplitScenes';
+
+const imageSchema = z.object({url: z.string(), credit: z.string()});
 
 export const newsSplitSchema = z.object({
   kicker: z.string(),
@@ -14,54 +15,72 @@ export const newsSplitSchema = z.object({
   highlights: z.array(z.string()),
   dateline: z.string(),
   independentSources: z.number(),
-  image: z.object({url: z.string(), credit: z.string()}).nullable(),
+  image: imageSchema.nullable(),
+  claims: z.array(
+    z.object({label: z.string(), texto: z.string(), image: imageSchema.nullable()}),
+  ),
+  sources: z.array(
+    z.object({name: z.string(), date: z.string(), favicon: z.string().nullable()}),
+  ),
+  brand: z.string(),
+  tagline: z.string(),
   personaSrc: z.string(),
-  clip: audioClipSchema,
+  narration: narrationSchema,
 });
 
 export type NewsSplitProps = z.infer<typeof newsSplitSchema>;
 
+const MAX_CLAIMS = 3;
+
 export const calculateNewsSplitMetadata: CalculateMetadataFunction<NewsSplitProps> = ({
   props,
-}) => ({durationInFrames: props.clip.durationInFrames + 12});
+}) => {
+  const d = sceneDurations(Math.min(props.claims.length, MAX_CLAIMS), props.narration);
+  return {
+    durationInFrames: d.hook + d.claims.reduce((a, b) => a + b, 0) + d.sources + d.closing,
+  };
+};
 
 /**
- * Split-screen reel: editorial card on the top half, the o agêntico
- * reporter lip-syncing the full narration on the bottom half.
+ * Split-screen reel: scene slider on the top half (cut to the narration,
+ * like NewsReel), the o agêntico reporter lip-syncing below.
  */
 export const NewsSplit: React.FC<NewsSplitProps> = (props) => {
-  const {kicker, headline, highlights, dateline, independentSources} = props;
-  const {image, personaSrc, clip} = props;
+  const {kicker, headline, highlights, dateline, independentSources, image} = props;
+  const {claims, sources, brand, tagline, personaSrc, narration} = props;
+  const shownClaims = claims.slice(0, MAX_CLAIMS);
+  const durations = sceneDurations(shownClaims.length, narration);
   return (
     <AbsoluteFill style={{backgroundColor: 'white'}}>
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          width: '100%',
-          height: '50%',
-          overflow: 'hidden',
-          padding: '330px 90px 30px',
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        }}
-      >
-        {image ? <ImageWithCredit image={image} height={280} /> : null}
-        <div
-          style={{
-            fontSize: 26,
-            color: '#555',
-            textDecoration: 'underline',
-            textUnderlineOffset: 6,
-            marginBottom: 20,
-          }}
-        >
-          {kicker}
-        </div>
-        <HeadlineWithHighlights headline={headline} highlights={highlights} fontSize={48} />
-        <div style={{fontSize: 25, color: '#333', marginTop: 22}}>
-          {`Apuração: ${independentSources} veículos independentes · ${dateline}`}
-        </div>
+      <div style={{position: 'absolute', top: 0, width: '100%', height: '50%', overflow: 'hidden'}}>
+        <Series>
+          <Series.Sequence durationInFrames={durations.hook}>
+            <SplitHook
+              kicker={kicker}
+              headline={headline}
+              highlights={highlights}
+              dateline={dateline}
+              independentSources={independentSources}
+              image={image}
+            />
+          </Series.Sequence>
+          {shownClaims.map((claim, i) => (
+            <Series.Sequence key={i} durationInFrames={durations.claims[i]}>
+              <SplitClaim
+                label={claim.label}
+                texto={claim.texto}
+                image={claim.image}
+                direction={i % 2 === 0 ? 'right' : 'left'}
+              />
+            </Series.Sequence>
+          ))}
+          <Series.Sequence durationInFrames={durations.sources}>
+            <SplitSources independentSources={independentSources} sources={sources} />
+          </Series.Sequence>
+          <Series.Sequence durationInFrames={durations.closing}>
+            <SplitClosing brand={brand} tagline={tagline} />
+          </Series.Sequence>
+        </Series>
       </div>
       <OffthreadVideo
         src={staticFile(personaSrc)}
@@ -75,9 +94,18 @@ export const NewsSplit: React.FC<NewsSplitProps> = (props) => {
         }}
       />
       <Watermark handle="@oagentico" whiteFromFrame={Number.MAX_SAFE_INTEGER} />
-      <Audio src={staticFile(clip.src)} />
-      {/* caption rides the seam between the card and the studio, clear of her face */}
-      <CaptionOverlay clip={clip} whiteFromFrame={Number.MAX_SAFE_INTEGER} bottom={790} chip />
+      {narration ? (
+        <>
+          <Audio src={staticFile(narration.clip.src)} />
+          {/* caption rides the seam between the card and the studio, clear of her face */}
+          <CaptionOverlay
+            clip={narration.clip}
+            whiteFromFrame={Number.MAX_SAFE_INTEGER}
+            bottom={790}
+            chip
+          />
+        </>
+      ) : null}
     </AbsoluteFill>
   );
 };
