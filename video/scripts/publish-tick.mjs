@@ -64,6 +64,9 @@ for (const event of dados.sort((a, b) => b.independentSources - a.independentSou
   state.seen[event.id] = new Date().toISOString();
   log(`evento novo #${event.id} → 1 reel + ${1 + chunks} carrosséis na fila`);
 }
+// newest first: news value decays fast, the backlog can wait
+// (stable sort keeps reel → carousels order within the same event)
+state.queue.sort((a, b) => b.id - a.id);
 save();
 
 // 2. caps
