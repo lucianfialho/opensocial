@@ -1,6 +1,7 @@
 // ElevenLabs narration with per-clip cache in public/audio/.
-// Voice: ELEVENLABS_VOICE_ID env (default: Daniel), model multilingual v2,
-// speed 1.2 (API max) — news-anchor pacing.
+// Voice: reporter pool (3 native pt-BR voices, picked per event) unless
+// ELEVENLABS_VOICE_ID forces one. Model eleven_v3, speed 1.2, pt-BR
+// pronunciation dictionary for English tech terms.
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
@@ -9,10 +10,20 @@ import {fileURLToPath} from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 30;
-const SPEED = 1.2; // ElevenLabs API cap
-const TEMPO = 1.0833; // ffmpeg atempo on top → 1.2 × 1.083 ≈ 1.3x effective
-const MODEL = 'eleven_multilingual_v2';
-const DEFAULT_VOICE = 'cjVigY5qzO86Huf0OWal'; // Eric
+const SPEED = 1.2; // ElevenLabs API cap — used as-is (no atempo)
+const TEMPO = 1; // no post-processing; 1.2 comes straight from the API
+const MODEL = 'eleven_v3';
+// The reporter pool: three native pt-BR voices, rotated per event so each
+// story keeps a consistent voice across re-renders (cache-friendly).
+const REPORTERS = [
+  {id: 'Qrdut83w0Cr152Yb4Xn3', name: 'Paulo'},
+  {id: 'cyD08lEy76q03ER1jZ7y', name: 'Scheila'},
+  {id: 'RGymW84CSmfVugnA5tvA', name: 'Roberta'},
+];
+const PRONUNCIATION_DICTIONARY = {
+  pronunciation_dictionary_id: 'OtVajeC5RdDnSY4sMZgk',
+  version_id: '3lWnwTlUpbZqEKD0LuFK',
+};
 
 export const envValue = (name) => {
   if (process.env[name]) return process.env[name];
@@ -21,32 +32,43 @@ export const envValue = (name) => {
   return readFileSync(envFile, 'utf8').match(new RegExp(`${name}=(.+)`))?.[1]?.trim();
 };
 
-const voiceId = () => envValue('ELEVENLABS_VOICE_ID') ?? DEFAULT_VOICE;
+const voiceFor = (eventId) => {
+  const forced = envValue('ELEVENLABS_VOICE_ID');
+  if (forced) return {id: forced, name: 'custom'};
+  return REPORTERS[Number(eventId) % REPORTERS.length];
+};
 
 /** with-timestamps: audio + per-character alignment → per-word timings. */
-async function tts(text, outPath, apiKey) {
+async function tts(text, outPath, apiKey, voice) {
   const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId()}/with-timestamps`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${voice.id}/with-timestamps`,
     {
       method: 'POST',
       headers: {'xi-api-key': apiKey, 'content-type': 'application/json'},
       body: JSON.stringify({
         text,
         model_id: MODEL,
+        language_code: 'pt',
+        apply_text_normalization: 'on',
+        pronunciation_dictionary_locators: [PRONUNCIATION_DICTIONARY],
         voice_settings: {speed: SPEED, stability: 0.5, similarity_boost: 0.75},
       }),
     },
   );
   if (!res.ok) throw new Error(`TTS ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  const rawPath = `${outPath}.raw.mp3`;
-  writeFileSync(rawPath, Buffer.from(data.audio_base64, 'base64'));
-  execFileSync(
-    'npx',
-    ['remotion', 'ffmpeg', '-i', rawPath, '-filter:a', `atempo=${TEMPO}`, outPath, '-y'],
-    {cwd: root, stdio: 'ignore'},
-  );
-  rmSync(rawPath);
+  if (TEMPO === 1) {
+    writeFileSync(outPath, Buffer.from(data.audio_base64, 'base64'));
+  } else {
+    const rawPath = `${outPath}.raw.mp3`;
+    writeFileSync(rawPath, Buffer.from(data.audio_base64, 'base64'));
+    execFileSync(
+      'npx',
+      ['remotion', 'ffmpeg', '-i', rawPath, '-filter:a', `atempo=${TEMPO}`, outPath, '-y'],
+      {cwd: root, stdio: 'ignore'},
+    );
+    rmSync(rawPath);
+  }
 
   const al = data.alignment;
   const words = [];
@@ -79,15 +101,16 @@ function durationInFrames(file) {
 /** One continuous clip for the whole reel; cached by voice+speed+text. */
 export async function narrateContinuous(eventId, fullText, apiKey) {
   mkdirSync(join(root, 'public', 'audio'), {recursive: true});
+  const voice = voiceFor(eventId);
   const hash = createHash('md5')
-    .update(`v3|${voiceId()}|${SPEED}|${TEMPO}|${fullText}`)
+    .update(`v4|${MODEL}|${voice.id}|${SPEED}|${TEMPO}|${fullText}`)
     .digest('hex')
     .slice(0, 8);
   const rel = `audio/news-${eventId}-full-${hash}.mp3`;
   const abs = join(root, 'public', rel);
   if (!existsSync(abs) || !existsSync(`${abs}.json`)) {
-    console.log(`tts: narração contínua (${fullText.length} chars)`);
-    await tts(fullText, abs, apiKey);
+    console.log(`tts: narração contínua (${fullText.length} chars) — repórter: ${voice.name}`);
+    await tts(fullText, abs, apiKey, voice);
   }
   const words = JSON.parse(readFileSync(`${abs}.json`, 'utf8'));
   return {src: rel, durationInFrames: durationInFrames(abs), words};
