@@ -82,7 +82,6 @@ export const SplitClosing: React.FC<{brand: string; tagline: string}> = ({
       backgroundColor: 'white',
       justifyContent: 'center',
       alignItems: 'center',
-      paddingTop: 160,
       fontFamily: FONT_UI,
     }}
   >
