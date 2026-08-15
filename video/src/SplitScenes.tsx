@@ -12,9 +12,9 @@ const FONT_UI =
   '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
 /**
- * Full-bleed photo for the top half of NewsSplit: slow Ken Burns zoom,
- * license credit always visible. The captions carry the words; the
- * slider carries only images.
+ * Photo card for the top half of NewsSplit: the image keeps its own
+ * aspect (no cover crop) inside a rounded card, gently floating.
+ * License credit always visible. Captions carry the words.
  */
 export const SplitImage: React.FC<{
   image: CreditedImage;
@@ -24,33 +24,49 @@ export const SplitImage: React.FC<{
   const {durationInFrames} = useVideoConfig();
   const scale =
     zoom === 'in'
-      ? interpolate(frame, [0, durationInFrames], [1, 1.08])
-      : interpolate(frame, [0, durationInFrames], [1.08, 1]);
+      ? interpolate(frame, [0, durationInFrames], [1, 1.04])
+      : interpolate(frame, [0, durationInFrames], [1.04, 1]);
   return (
-    <AbsoluteFill style={{backgroundColor: '#101013', overflow: 'hidden'}}>
-      <Img
-        src={image.url}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          transform: `scale(${scale})`,
-        }}
-      />
+    <AbsoluteFill
+      style={{
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: 150,
+      }}
+    >
       <div
         style={{
-          position: 'absolute',
-          right: 14,
-          bottom: 14,
-          fontSize: 19,
-          color: '#333',
-          backgroundColor: 'rgba(255,255,255,0.88)',
-          padding: '5px 12px',
-          borderRadius: 7,
-          fontFamily: FONT_UI,
+          position: 'relative',
+          transform: `scale(${scale})`,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.18)',
+          borderRadius: 22,
         }}
       >
-        {image.credit}
+        <Img
+          src={image.url}
+          style={{
+            display: 'block',
+            maxWidth: 880,
+            maxHeight: 620,
+            borderRadius: 22,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            right: 12,
+            bottom: 12,
+            fontSize: 19,
+            color: '#333',
+            backgroundColor: 'rgba(255,255,255,0.88)',
+            padding: '5px 12px',
+            borderRadius: 7,
+            fontFamily: FONT_UI,
+          }}
+        >
+          {image.credit}
+        </div>
       </div>
     </AbsoluteFill>
   );
