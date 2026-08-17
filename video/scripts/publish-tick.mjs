@@ -22,7 +22,6 @@ const ACTIVE_HOURS = [8, 22]; // local time window
 const REELS_PER_DAY = Number(envValue('OPENSOCIAL_REELS_PER_DAY') ?? 4);
 const POSTS_PER_DAY = Number(envValue('OPENSOCIAL_POSTS_PER_DAY') ?? 6);
 const MIN_GAP_MINUTES = Number(envValue('OPENSOCIAL_MIN_GAP_MINUTES') ?? 50);
-const CLAIM_CHUNKS_PER_EVENT = 2;
 // Machine slice: which content types THIS machine ingests and publishes.
 // Set OPENSOCIAL_TICK_TYPES=reel (desktop) or =carousel (VPS) in the unit
 // or packages/video/.env; unset = both (single-machine mode).
@@ -89,18 +88,13 @@ if (!res.ok) throw new Error(`API ${res.status}`);
 const {dados} = await res.json();
 for (const event of dados.sort((a, b) => b.independentSources - a.independentSources)) {
   if (state.seen[event.id]) continue;
-  const detail = await (
-    await fetch(`${API}/eventos/${event.id}`, {headers: {Authorization: `Bearer ${token}`}})
-  ).json();
-  const claimCount = detail.dados?.claims?.length ?? 0;
-  const chunks = Math.min(CLAIM_CHUNKS_PER_EVENT, Math.floor(claimCount / 4));
+  // one piece per type per event: a reel and ONE carousel — the LLM-scripted
+  // resumo already tells the whole story, and a second claims carousel of
+  // the same event reads as a duplicate post in the feed
   const pieces = [
     {type: 'reel', id: event.id, title: event.title},
     {type: 'carousel', mode: 'resumo', id: event.id, title: event.title},
   ];
-  for (let c = 0; c < chunks; c++) {
-    pieces.push({type: 'carousel', mode: 'claims', chunk: c, id: event.id, title: event.title});
-  }
   const mine = pieces.filter((p) => TICK_TYPES.has(p.type));
   state.queue.push(...mine);
   state.seen[event.id] = new Date().toISOString();
