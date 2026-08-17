@@ -18,7 +18,8 @@ const STATE_FILE = join(homedir(), '.config', 'opensocial', 'oagentico-queue.jso
 // pacing knobs — the ceiling is Meta's action block, not hardware, so ramp
 // in steps (6 → 8 → 12) watching for 2207051. Overridable per machine via
 // env/.env so a ramp step is a unit edit, not a deploy.
-const ACTIVE_HOURS = [8, 22]; // local time window
+// "8,22" = publica das 8h às 22h locais; "0,24" = 24/7
+const ACTIVE_HOURS = (envValue('OPENSOCIAL_ACTIVE_HOURS') ?? '8,22').split(',').map(Number);
 const REELS_PER_DAY = Number(envValue('OPENSOCIAL_REELS_PER_DAY') ?? 4);
 const POSTS_PER_DAY = Number(envValue('OPENSOCIAL_POSTS_PER_DAY') ?? 6);
 const MIN_GAP_MINUTES = Number(envValue('OPENSOCIAL_MIN_GAP_MINUTES') ?? 50);
@@ -63,12 +64,17 @@ if (state.pending) {
   save();
 }
 
-// Machine slice: drop queue items that belong to the other machine.
+// Machine slice + freshness: drop items of the other machine's type, and
+// drop anything queued 3+ days ago — news that old is dead news, and the
+// slot belongs to whatever is hot now (same 3-day cap the site uses).
 {
   const before = state.queue.length;
-  state.queue = state.queue.filter((i) => TICK_TYPES.has(i.type));
+  const cutoff = Date.now() - 3 * 86400_000;
+  state.queue = state.queue.filter(
+    (i) => TICK_TYPES.has(i.type) && (!i.queuedAt || new Date(i.queuedAt).getTime() > cutoff),
+  );
   if (state.queue.length !== before) {
-    log(`fatia [${[...TICK_TYPES]}]: ${before - state.queue.length} itens de outros tipos removidos da fila.`);
+    log(`limpeza: ${before - state.queue.length} itens (outra fatia ou 3+ dias na fila) removidos.`);
     save();
   }
 }
@@ -97,9 +103,10 @@ for (const event of dados) {
   // one piece per type per event: a reel and ONE carousel — the LLM-scripted
   // resumo already tells the whole story, and a second claims carousel of
   // the same event reads as a duplicate post in the feed
+  const queuedAt = new Date().toISOString();
   const pieces = [
-    {type: 'reel', id: event.id, title: event.title},
-    {type: 'carousel', mode: 'resumo', id: event.id, title: event.title},
+    {type: 'reel', id: event.id, title: event.title, queuedAt},
+    {type: 'carousel', mode: 'resumo', id: event.id, title: event.title, queuedAt},
   ];
   fresh.push(...pieces.filter((p) => TICK_TYPES.has(p.type)));
   state.seen[event.id] = new Date().toISOString();
