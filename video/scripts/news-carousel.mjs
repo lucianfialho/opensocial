@@ -103,16 +103,26 @@ if (mode === 'claims') {
   if (script) {
     let imgCursor = 0;
     let essayCount = 0;
+    const clean = (t) => (t ?? '').replaceAll('**', '');
     middleCards = script.cards.map((c) => {
-      const common = {...base, kicker: c.kicker ?? '', headline: c.headline, highlights: c.accent ? [c.accent] : []};
+      const common = {...base, kicker: clean(c.kicker), headline: clean(c.headline), highlights: c.accent ? [clean(c.accent)] : []};
       if (c.style === 'essay') {
         essayCount += 1;
-        return {...common, variant: 'essay', paragraphs: c.paragraphs ?? [], closer: c.closer, numeral: String(essayCount + 1), image: null};
+        return {
+          ...common,
+          variant: 'essay',
+          paragraphs: (c.paragraphs ?? []).map(clean),
+          closer: clean(c.closer) || undefined,
+          numeral: String(essayCount + 1),
+          image: null,
+        };
       }
       if (c.style === 'photo' && articleImages[imgCursor]) {
         return {...common, variant: 'body', image: articleImages[imgCursor++]};
       }
-      return {...common, variant: 'body', intro: c.intro, image: null};
+      // cream: any body text the writer produced becomes the context intro
+      const intro = clean(c.intro) || (c.paragraphs ?? []).map(clean).join(' ');
+      return {...common, variant: 'body', intro: intro || undefined, image: null};
     });
     caption = script.caption;
     coverOverride = {
@@ -162,27 +172,15 @@ const cards = [cover, ...middleCards, cta].map((c, i, arr) => ({...c, fit: 'cove
 
 mkdirSync(join(root, 'out', 'carousel'), {recursive: true});
 const slug = `news-${story.id}-${mode}${mode === 'claims' ? chunk : ''}`;
+// satori engine: JSON -> SVG -> sRGB baseline JPEG. No Chrome involved.
+const {renderCard} = await import('./card-engine.mjs');
 const files = [];
-cards.forEach((card, i) => {
-  const output = join('out', 'carousel', `${slug}-slide-${i + 1}.jpg`);
-  console.log(`rendering ${output}`);
-  // REMOTION_BROWSER_EXECUTABLE: reuse a pre-installed chrome-headless-shell
-  // instead of letting Remotion download its own (saves 193MB on servers).
-  const browserArgs = process.env.REMOTION_BROWSER_EXECUTABLE
-    ? [`--browser-executable=${process.env.REMOTION_BROWSER_EXECUTABLE}`]
-    : [];
-  execFileSync('npx', ['remotion', 'still', 'PhotoCard', output, '--image-format=jpeg', '--timeout=120000', ...browserArgs, `--props=${JSON.stringify(card)}`], {cwd: root, stdio: 'inherit'});
-  files.push(join(root, output));
-});
-
-// Normalize every card to a bog-standard sRGB baseline JPEG — Chrome's
-// screenshot JPEGs (bt470bg, no ICC) are suspected of tripping Instagram's
-// image ingestion (2207032 at publish).
-for (const file of files) {
-  const normalized = await sharp(file).withMetadata().jpeg({quality: 90, mozjpeg: true}).toBuffer();
-  writeFileSync(file, normalized);
+for (const [i, card] of cards.entries()) {
+  const output = join(root, 'out', 'carousel', `${slug}-slide-${i + 1}.jpg`);
+  console.log(`rendering slide ${i + 1}/${cards.length}`);
+  await renderCard(card, output);
+  files.push(output);
 }
-console.log('cards normalizados (sRGB baseline JPEG via sharp)');
 
 const captionFile = join(root, 'out', 'carousel', `${slug}.caption.txt`);
 writeFileSync(captionFile, caption);
