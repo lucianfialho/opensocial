@@ -20,13 +20,17 @@ const FONTS = [
 ];
 
 const imageCache = new Map();
-/** satori does not fetch — remote images become data URIs up front. */
+/** satori does not fetch — remote images become data URIs up front, and
+ *  everything is transcoded to JPEG (resvg cannot decode webp/avif). */
 async function toDataUri(url) {
   if (imageCache.has(url)) return imageCache.get(url);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`imagem ${res.status}: ${url}`);
-  const mime = res.headers.get('content-type') ?? 'image/jpeg';
-  const uri = `data:${mime};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
+  const jpeg = await sharp(Buffer.from(await res.arrayBuffer()))
+    .resize(1080, 1350, {fit: 'outside', withoutEnlargement: true})
+    .jpeg({quality: 88})
+    .toBuffer();
+  const uri = `data:image/jpeg;base64,${jpeg.toString('base64')}`;
   imageCache.set(url, uri);
   return uri;
 }

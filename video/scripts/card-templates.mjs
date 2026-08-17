@@ -25,23 +25,27 @@ const kickerRow = (text, color, mb = 26) =>
 
 /** Statement with accent phrases: yellow letters (dark) or yellow chip (light). */
 const accented = (text, highlights, fontSize, mode, extra = {}) => {
-  const spans = [];
-  let rest = text;
+  const ranges = [];
+  const lower = text.toLowerCase();
   for (const p of highlights ?? []) {
-    const at = rest.toLowerCase().indexOf(p.toLowerCase());
-    if (at < 0) continue;
-    if (at > 0) spans.push({text: rest.slice(0, at), accent: false});
-    spans.push({text: rest.slice(at, at + p.length), accent: true});
-    rest = rest.slice(at + p.length);
+    const at = lower.indexOf(p.toLowerCase());
+    if (at >= 0) ranges.push({start: at, end: at + p.length});
   }
-  spans.push({text: rest, accent: false});
   const color = mode === 'dark' ? 'white' : INK;
   // Word-level flex items, every span shaped "word + trailing space": no
   // leading spaces means wrapped lines all start flush left, and accent
-  // chips still form a continuous marker band across their words.
-  const words = spans.flatMap((s) =>
-    s.text.split(/\s+/).filter(Boolean).map((word) => ({word, accent: s.accent})),
-  );
+  // chips still form a continuous marker band across their words. Tokens
+  // come from the ORIGINAL text so punctuation stays glued to its word; a
+  // token is accented when it overlaps any highlight range.
+  const words = [];
+  let cursor = 0;
+  for (const token of text.split(/\s+/).filter(Boolean)) {
+    const start = text.indexOf(token, cursor);
+    const end = start + token.length;
+    cursor = end;
+    const accent = ranges.some((r) => start < r.end && end > r.start);
+    words.push({word: token, accent});
+  }
   return h(
     'div',
     {display: 'flex', flexWrap: 'wrap', fontWeight: 800, fontSize, lineHeight: 1.25, letterSpacing: -1, color, ...extra},
@@ -107,7 +111,7 @@ export const templates = {
           letterSpacing: -3,
         }),
         card.subtitle
-          ? h('div', {display: 'flex', fontSize: 31, fontWeight: 400, lineHeight: 1.35, color: 'rgba(255,255,255,0.85)', marginTop: 26}, card.subtitle)
+          ? h('div', {display: 'flex', fontSize: 40, fontWeight: 400, lineHeight: 1.35, color: 'rgba(255,255,255,0.92)', marginTop: 28}, card.subtitle)
           : null,
       ),
       pager(card.page, 'rgba(255,255,255,0.7)'),
