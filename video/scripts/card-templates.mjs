@@ -176,8 +176,8 @@ export const templates = {
       h(
         'div',
         {display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center', alignItems: 'center'},
-        h('div', {display: 'flex', fontSize: 84, fontWeight: 800, color: 'white', textTransform: 'uppercase'}, card.headline),
-        h('div', {display: 'flex', fontSize: 28, letterSpacing: 4, color: 'rgba(255,255,255,0.85)', marginTop: 20, textTransform: 'uppercase'}, card.kicker),
+        h('div', {display: 'flex', fontFamily: 'Gofar', fontSize: 150, color: 'white'}, wordmark(card.brand)),
+        h('div', {display: 'flex', fontSize: 28, letterSpacing: 4, color: 'rgba(255,255,255,0.85)', marginTop: 24, textTransform: 'uppercase'}, card.kicker),
         h('div', {display: 'flex', backgroundColor: 'white', color: INK, fontSize: 27, fontWeight: 800, padding: '16px 36px', borderRadius: 999, marginTop: 40}, 'Siga para mais notícias'),
       ),
     ),
