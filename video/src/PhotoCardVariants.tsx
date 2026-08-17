@@ -4,7 +4,8 @@ import {AccentText, Masthead, Pager, ACCENT, CREAM, INK, SANS} from './PhotoCard
 
 const MONO = '"SF Mono", ui-monospace, "Cascadia Mono", Menlo, monospace';
 
-/** Light text card: context paragraph + bold statement, cream ground. */
+/** Light text card: context paragraph + big bold statement, cream ground.
+ *  Type scales up when there is little content so the card never feels empty. */
 export const CreamCard: React.FC<{
   brand: string;
   kicker: string;
@@ -13,15 +14,20 @@ export const CreamCard: React.FC<{
   highlights?: string[];
   page?: string;
 }> = ({brand, kicker, headline, intro, highlights, page}) => (
-  <AbsoluteFill style={{backgroundColor: CREAM, fontFamily: SANS, justifyContent: 'center', padding: '170px 80px 120px'}}>
+  <AbsoluteFill style={{backgroundColor: CREAM, fontFamily: SANS, justifyContent: 'center', padding: '170px 76px 140px'}}>
     <Masthead brand={brand} mode="light" />
-    {intro ? (
-      <div style={{color: 'rgba(20,20,18,0.82)', fontSize: 33, lineHeight: 1.5, marginBottom: 44}}>{intro}</div>
-    ) : null}
-    <AccentText text={headline} highlights={highlights ?? []} fontSize={intro ? 50 : 56} mode="light" />
-    <div style={{color: 'rgba(20,20,18,0.55)', fontSize: 22, fontWeight: 700, letterSpacing: 5, textTransform: 'uppercase', marginTop: 44}}>
+    <div style={{color: 'rgba(20,20,18,0.55)', fontSize: 24, fontWeight: 700, letterSpacing: 6, textTransform: 'uppercase', marginBottom: 34}}>
       {kicker}
     </div>
+    {intro ? (
+      <div style={{color: 'rgba(20,20,18,0.85)', fontSize: 36, lineHeight: 1.45, marginBottom: 48}}>{intro}</div>
+    ) : null}
+    <AccentText
+      text={headline}
+      highlights={highlights ?? []}
+      fontSize={intro ? 58 : headline.length > 80 ? 66 : 84}
+      mode="light"
+    />
     <Pager page={page} mode="light" />
   </AbsoluteFill>
 );

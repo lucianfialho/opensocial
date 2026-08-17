@@ -70,6 +70,70 @@ export const RemotionRoot: React.FC = () => {
           fit: 'cover' as const,
         }}
       />
+      {/* work stills for card design iteration (real Bitpanda content) */}
+      <Still
+        id="CardCover"
+        component={PhotoCard}
+        schema={photoCardSchema}
+        width={1080}
+        height={1350}
+        defaultProps={{
+          brand: 'o agêntico',
+          handle: '@oagentico',
+          kicker: 'IA & Tech',
+          headline: 'A primeira multa do MiCA já saiu',
+          subtitle: 'E foi a Bitpanda quem levou.',
+          highlights: ['primeira multa'],
+          page: '1/8',
+          image: {url: 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=1080', credit: 'Foto: coindesk.com'},
+          variant: 'title' as const,
+          fit: 'cover' as const,
+        }}
+      />
+      <Still
+        id="CardEssay"
+        component={PhotoCard}
+        schema={photoCardSchema}
+        width={1080}
+        height={1350}
+        defaultProps={{
+          brand: 'o agêntico',
+          handle: '@oagentico',
+          kicker: 'O contexto',
+          headline: 'O MiCA chegou pra valer na Europa',
+          highlights: ['MiCA'],
+          paragraphs: [
+            'A Áustria criou um marco: a primeira penalidade pública sob o novo regulamento europeu de criptoativos.',
+            'O MiCA exige transparência antes de qualquer lançamento. White paper, prazos, dados de contato — tudo tem que estar certo antes de ir ao público.',
+          ],
+          closer: 'Não é aviso. É precedente.',
+          numeral: '2',
+          page: '3/8',
+          image: null,
+          variant: 'essay' as const,
+          fit: 'cover' as const,
+        }}
+      />
+      <Still
+        id="CardCream"
+        component={PhotoCard}
+        schema={photoCardSchema}
+        width={1080}
+        height={1350}
+        defaultProps={{
+          brand: 'o agêntico',
+          handle: '@oagentico',
+          kicker: 'O peso do caso',
+          headline: 'Esse é o primeiro caso público do tipo na UE',
+          highlights: ['primeiro caso público'],
+          intro:
+            'Com o MiCA ainda recente, cada penalidade vira referência para todo o setor. Reguladores de outros países vão olhar pra esse caso antes de decidir como agir.',
+          page: '6/8',
+          image: null,
+          variant: 'body' as const,
+          fit: 'cover' as const,
+        }}
+      />
       <Composition
         id="NewsReel"
         component={NewsReel}
