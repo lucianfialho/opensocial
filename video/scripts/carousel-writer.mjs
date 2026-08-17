@@ -1,13 +1,14 @@
 // LLM carousel scriptwriter: turns an event's synthesis (title + summary +
-// claims) into a magazine-style card script. Cached per event; caller falls
-// back to the mechanical builder when no ANTHROPIC_API_KEY is configured.
+// claims) into a magazine-style card script via the Vercel AI Gateway.
+// Cached per event; caller falls back to the mechanical builder when no
+// AI_GATEWAY_API_KEY is configured.
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'claude-sonnet-5';
+const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
 
 const PROMPT = `Você é o editor de social do "o agêntico", veículo brasileiro de notícias de IA e tech. Converta a síntese de uma notícia em um roteiro de carrossel de Instagram no estilo revista (capa forte, storytelling no miolo, punchline).
 
@@ -32,7 +33,7 @@ export async function writeCarouselScript(story, detail) {
   // a ready script needs no API key — cache first
   if (existsSync(cachePath)) return JSON.parse(readFileSync(cachePath, 'utf8'));
 
-  const apiKey = envValue('ANTHROPIC_API_KEY');
+  const apiKey = envValue('AI_GATEWAY_API_KEY');
   if (!apiKey) return null;
 
   const synthesis = {
@@ -41,26 +42,27 @@ export async function writeCarouselScript(story, detail) {
     fatos: (detail.claims ?? []).map((c) => c.texto),
     veiculosIndependentes: story.independentSources,
   };
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      authorization: `Bearer ${apiKey}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 2048,
-      system: PROMPT,
-      messages: [{role: 'user', content: JSON.stringify(synthesis)}],
+      messages: [
+        {role: 'system', content: PROMPT},
+        {role: 'user', content: JSON.stringify(synthesis)},
+      ],
     }),
   });
   if (!res.ok) {
-    console.error(`writer: Anthropic ${res.status} — caindo no builder mecânico`);
+    console.error(`writer: AI Gateway ${res.status} — caindo no builder mecânico`);
     return null;
   }
   const data = await res.json();
-  const text = data.content?.[0]?.text ?? '';
+  const text = data.choices?.[0]?.message?.content ?? '';
   try {
     const script = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
     if (!script.cover?.headline || !Array.isArray(script.cards) || script.cards.length === 0) {
