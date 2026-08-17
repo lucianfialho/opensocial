@@ -15,13 +15,13 @@ const h = (type, style, ...children) => {
 const wordmark = (brand) => brand.replace(/\s+/g, '');
 
 const masthead = (brand, color) =>
-  h('div', {position: 'absolute', top: 44, left: 0, right: 0, display: 'flex', justifyContent: 'center', fontFamily: 'Gofar', fontSize: 60, color}, wordmark(brand));
+  h('div', {position: 'absolute', top: 56, left: 0, right: 0, display: 'flex', justifyContent: 'center', fontFamily: 'Gofar', fontSize: 60, color}, wordmark(brand));
 
 const pager = (page, color) =>
-  page ? h('div', {position: 'absolute', bottom: 34, right: 44, fontSize: 24, color}, page) : null;
+  page ? h('div', {position: 'absolute', bottom: 46, right: 60, fontSize: 24, color}, page) : null;
 
 const kickerRow = (text, color, mb = 26) =>
-  h('div', {display: 'flex', fontSize: 23, fontWeight: 700, letterSpacing: 5, textTransform: 'uppercase', color, marginBottom: mb}, text);
+  h('div', {display: 'flex', fontSize: 26, fontWeight: 700, letterSpacing: 6, textTransform: 'uppercase', color, marginBottom: mb}, text);
 
 /** Statement with accent phrases: yellow letters (dark) or yellow chip (light). */
 const accented = (text, highlights, fontSize, mode, extra = {}) => {
@@ -68,7 +68,7 @@ const accented = (text, highlights, fontSize, mode, extra = {}) => {
  * count (short titles = 2 fat lines, long ones = 4), then size the font so
  * those lines fill the column width. k ≈ average Inter-800 glyph width.
  */
-const fitHeadline = (text, width = 956) => {
+const fitHeadline = (text, width = 912) => {
   const len = text.length;
   const lines = len <= 40 ? 2 : len <= 75 ? 3 : 4;
   const k = 0.52;
@@ -90,7 +90,7 @@ const scrim = () =>
   h('div', {position: 'absolute', top: 0, left: 0, width: 1080, height: 1350, background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.05) 26%, rgba(0,0,0,0.25) 48%, rgba(0,0,0,0.88) 72%, rgba(0,0,0,0.97) 100%)'});
 
 const credit = (card) =>
-  card.image ? h('div', {position: 'absolute', top: 20, left: 22, fontSize: 17, color: 'rgba(255,255,255,0.62)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`) : null;
+  card.image ? h('div', {position: 'absolute', top: 30, left: 32, fontSize: 17, color: 'rgba(255,255,255,0.62)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`) : null;
 
 const shell = (bg, ...children) =>
   h('div', {display: 'flex', flexDirection: 'column', width: 1080, height: 1350, backgroundColor: bg, fontFamily: 'Inter', position: 'relative'}, ...children.filter(Boolean));
@@ -105,7 +105,7 @@ export const templates = {
       credit(card),
       h(
         'div',
-        {position: 'absolute', left: 64, right: 50, bottom: 76, display: 'flex', flexDirection: 'column'},
+        {position: 'absolute', left: 84, right: 84, bottom: 104, display: 'flex', flexDirection: 'column'},
         accented(card.headline, card.highlights, fitHeadline(card.headline), 'dark', {
           lineHeight: 1.04,
           letterSpacing: -3,
@@ -126,9 +126,9 @@ export const templates = {
       credit(card),
       h(
         'div',
-        {position: 'absolute', left: 60, right: 60, bottom: 70, display: 'flex', flexDirection: 'column'},
+        {position: 'absolute', left: 84, right: 84, bottom: 104, display: 'flex', flexDirection: 'column'},
         kickerRow(card.kicker, 'rgba(255,255,255,0.8)', 18),
-        accented(card.headline, card.highlights, card.headline.length > 160 ? 44 : 54, 'dark'),
+        accented(card.headline, card.highlights, Math.min(92, fitHeadline(card.headline, 912)), 'dark', {lineHeight: 1.08, letterSpacing: -2}),
       ),
       pager(card.page, 'rgba(255,255,255,0.7)'),
     ),
@@ -142,14 +142,14 @@ export const templates = {
       masthead(card.brand, 'white'),
       h(
         'div',
-        {display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center', padding: '170px 80px 120px'},
-        kickerRow(card.kicker, 'rgba(255,255,255,0.55)'),
-        accented(card.headline, card.highlights, 60, 'dark'),
-        h('div', {display: 'flex', width: 240, height: 6, backgroundColor: ACCENT, marginTop: 24, borderRadius: 3}),
+        {display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center', padding: '190px 88px 150px'},
+        kickerRow(card.kicker, 'rgba(255,255,255,0.55)', 30),
+        accented(card.headline, card.highlights, Math.min(88, fitHeadline(card.headline, 904)), 'dark', {lineHeight: 1.08, letterSpacing: -2}),
+        h('div', {display: 'flex', width: 280, height: 7, backgroundColor: ACCENT, marginTop: 28, borderRadius: 4}),
         ...(card.paragraphs ?? []).map((p, i) =>
-          h('div', {display: 'flex', fontSize: 31, lineHeight: 1.5, color: 'rgba(255,255,255,0.82)', marginTop: i === 0 ? 42 : 30}, p),
+          h('div', {display: 'flex', fontSize: 37, lineHeight: 1.5, color: 'rgba(255,255,255,0.84)', marginTop: i === 0 ? 52 : 36}, p),
         ),
-        card.closer ? h('div', {display: 'flex', fontSize: 31, fontWeight: 800, lineHeight: 1.45, color: 'white', marginTop: 42}, card.closer) : null,
+        card.closer ? h('div', {display: 'flex', fontSize: 38, fontWeight: 800, lineHeight: 1.4, color: 'white', marginTop: 52}, card.closer) : null,
       ),
       pager(card.page, 'rgba(255,255,255,0.7)'),
     ),
@@ -160,12 +160,12 @@ export const templates = {
       masthead(card.brand, INK),
       h(
         'div',
-        {display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center', padding: '170px 76px 140px'},
+        {display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center', padding: '190px 88px 150px'},
         kickerRow(card.kicker, 'rgba(20,20,18,0.55)', 34),
         card.intro
-          ? h('div', {display: 'flex', fontSize: 36, lineHeight: 1.45, color: 'rgba(20,20,18,0.85)', marginBottom: 48}, card.intro)
+          ? h('div', {display: 'flex', fontSize: 40, lineHeight: 1.5, color: 'rgba(20,20,18,0.85)', marginBottom: 56}, card.intro)
           : null,
-        accented(card.headline, card.highlights, card.intro ? 58 : card.headline.length > 80 ? 66 : 84, 'light'),
+        accented(card.headline, card.highlights, card.intro ? 64 : Math.min(96, fitHeadline(card.headline, 904)), 'light', {lineHeight: 1.15}),
       ),
       pager(card.page, 'rgba(20,20,18,0.55)'),
     ),
