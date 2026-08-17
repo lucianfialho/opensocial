@@ -16,7 +16,7 @@ Regras:
 - 4 a 6 cards no miolo (além de capa e CTA, que são automáticos)
 - Capa: reescreva o título como gancho curto (pergunta ou afirmação de impacto, máx 9 palavras) + um subtítulo de 1 frase
 - Todo texto em pt-BR, frases curtas, ritmo de fala; zero jargão corporativo
-- Em cada card, "accent" é um trecho EXATO (copiado letra a letra) do headline daquele card
+- Em cada card, "accent" é um trecho EXATO (copiado letra a letra) do headline daquele card, com NO MÁXIMO 4 palavras — nunca o headline inteiro
 - Estilos de card do miolo: "photo" (frase forte, vai sobre foto), "essay" (headline + 2-3 parágrafos curtos + closer em negrito), "cream" (respiro: parágrafo de contexto + afirmação forte)
 - Use "essay" para o desenvolvimento (o porquê importa), "photo" para fatos de impacto, "cream" no máximo 1x
 - Nunca invente fato que não esteja na síntese; números sempre preservados
@@ -42,6 +42,7 @@ export async function writeCarouselScript(story, detail) {
     fatos: (detail.claims ?? []).map((c) => c.texto),
     veiculosIndependentes: story.independentSources,
   };
+  for (let attempt = 1; attempt <= 2; attempt++) {
   const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -50,7 +51,7 @@ export async function writeCarouselScript(story, detail) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [
         {role: 'system', content: PROMPT},
         {role: 'user', content: JSON.stringify(synthesis)},
@@ -58,11 +59,12 @@ export async function writeCarouselScript(story, detail) {
     }),
   });
   if (!res.ok) {
-    console.error(`writer: AI Gateway ${res.status} — caindo no builder mecânico`);
-    return null;
+    console.error(`writer: AI Gateway ${res.status} (tentativa ${attempt})`);
+    continue;
   }
   const data = await res.json();
-  const text = data.choices?.[0]?.message?.content ?? '';
+  const raw = data.choices?.[0]?.message?.content ?? '';
+  const text = raw.replace(/```(?:json)?/g, '');
   try {
     const script = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
     if (!script.cover?.headline || !Array.isArray(script.cards) || script.cards.length === 0) {
@@ -72,7 +74,9 @@ export async function writeCarouselScript(story, detail) {
     console.log(`writer: roteiro de ${script.cards.length + 2} cards (${MODEL})`);
     return script;
   } catch (err) {
-    console.error(`writer: resposta inválida (${err.message}) — caindo no builder mecânico`);
-    return null;
+    console.error(`writer: resposta inválida (${err.message}) — tentativa ${attempt}`);
   }
+  }
+  console.error('writer: sem roteiro válido — caindo no builder mecânico');
+  return null;
 }
