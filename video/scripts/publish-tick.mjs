@@ -86,7 +86,12 @@ const res = await fetch(`${API}/eventos?desde=${since}&limite=20`, {
 });
 if (!res.ok) throw new Error(`API ${res.status}`);
 const {dados} = await res.json();
-for (const event of dados.sort((a, b) => b.independentSources - a.independentSources)) {
+// The API is the editorial authority: /eventos comes ordered by recent
+// activity (capped at 3 days), so we consume it AS DELIVERED — no local
+// re-sorting by source count or cluster id (id order buried developing
+// stories whose cluster was born days earlier).
+const fresh = [];
+for (const event of dados) {
   if (state.seen[event.id]) continue;
   // one piece per type per event: a reel and ONE carousel — the LLM-scripted
   // resumo already tells the whole story, and a second claims carousel of
@@ -95,14 +100,14 @@ for (const event of dados.sort((a, b) => b.independentSources - a.independentSou
     {type: 'reel', id: event.id, title: event.title},
     {type: 'carousel', mode: 'resumo', id: event.id, title: event.title},
   ];
-  const mine = pieces.filter((p) => TICK_TYPES.has(p.type));
-  state.queue.push(...mine);
+  fresh.push(...pieces.filter((p) => TICK_TYPES.has(p.type)));
   state.seen[event.id] = new Date().toISOString();
-  log(`evento novo #${event.id} → ${mine.length} item(ns) da nossa fatia na fila`);
+  log(`evento novo #${event.id} → fila (ordem editorial da API)`);
 }
-// newest first: news value decays fast, the backlog can wait
-// (stable sort keeps reel → carousels order within the same event)
-state.queue.sort((a, b) => b.id - a.id);
+// fresh batch jumps the line, keeping the API's order within the batch:
+// news value decays fast and the backlog can wait — but "newest" now means
+// most recent ACTIVITY, and the site decides that, not us.
+state.queue.unshift(...fresh);
 save();
 
 // 2. caps
