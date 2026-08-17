@@ -27,12 +27,13 @@ Responda SÓ com JSON válido:
  "caption": "..."}`;
 
 export async function writeCarouselScript(story, detail) {
-  const apiKey = envValue('ANTHROPIC_API_KEY');
-  if (!apiKey) return null;
-
   mkdirSync(join(root, 'out', 'carousel'), {recursive: true});
   const cachePath = join(root, 'out', 'carousel', `news-${story.id}.script.json`);
+  // a ready script needs no API key — cache first
   if (existsSync(cachePath)) return JSON.parse(readFileSync(cachePath, 'utf8'));
+
+  const apiKey = envValue('ANTHROPIC_API_KEY');
+  if (!apiKey) return null;
 
   const synthesis = {
     titulo: story.title,
