@@ -24,7 +24,7 @@ const kickerRow = (text, color, mb = 26) =>
   h('div', {display: 'flex', fontSize: 23, fontWeight: 700, letterSpacing: 5, textTransform: 'uppercase', color, marginBottom: mb}, text);
 
 /** Statement with accent phrases: yellow letters (dark) or yellow chip (light). */
-const accented = (text, highlights, fontSize, mode) => {
+const accented = (text, highlights, fontSize, mode, extra = {}) => {
   const spans = [];
   let rest = text;
   for (const p of highlights ?? []) {
@@ -36,25 +36,40 @@ const accented = (text, highlights, fontSize, mode) => {
   }
   spans.push({text: rest, accent: false});
   const color = mode === 'dark' ? 'white' : INK;
-  // word-level flex items; each word keeps its trailing space (whiteSpace
-  // pre) so accent chips form a continuous marker band
+  // Word-level flex items, every span shaped "word + trailing space": no
+  // leading spaces means wrapped lines all start flush left, and accent
+  // chips still form a continuous marker band across their words.
+  const words = spans.flatMap((s) =>
+    s.text.split(/\s+/).filter(Boolean).map((word) => ({word, accent: s.accent})),
+  );
   return h(
     'div',
-    {display: 'flex', flexWrap: 'wrap', fontWeight: 800, fontSize, lineHeight: 1.25, letterSpacing: -1, color},
-    ...spans.flatMap((s) =>
-      (s.text.match(/\s*\S+\s*/g) ?? []).map((word) =>
-        h(
-          'span',
-          s.accent
-            ? mode === 'dark'
-              ? {color: ACCENT, whiteSpace: 'pre'}
-              : {backgroundColor: ACCENT, whiteSpace: 'pre', padding: '2px 0'}
-            : {whiteSpace: 'pre'},
-          word,
-        ),
+    {display: 'flex', flexWrap: 'wrap', fontWeight: 800, fontSize, lineHeight: 1.25, letterSpacing: -1, color, ...extra},
+    ...words.map(({word, accent}, i) =>
+      h(
+        'span',
+        accent
+          ? mode === 'dark'
+            ? {color: ACCENT, whiteSpace: 'pre'}
+            : {backgroundColor: ACCENT, whiteSpace: 'pre', padding: '2px 0'}
+          : {whiteSpace: 'pre'},
+        i < words.length - 1 ? `${word} ` : word,
       ),
     ),
   );
+};
+
+/**
+ * Cover-headline sizing rule: pick a target line count from the character
+ * count (short titles = 2 fat lines, long ones = 4), then size the font so
+ * those lines fill the column width. k ≈ average Inter-800 glyph width.
+ */
+const fitHeadline = (text, width = 956) => {
+  const len = text.length;
+  const lines = len <= 40 ? 2 : len <= 75 ? 3 : 4;
+  const k = 0.52;
+  const size = Math.round((width * lines) / (k * len));
+  return Math.max(62, Math.min(112, size));
 };
 
 const photoLayer = (card) => ({
@@ -68,7 +83,7 @@ const photoLayer = (card) => ({
 });
 
 const scrim = () =>
-  h('div', {position: 'absolute', top: 0, left: 0, width: 1080, height: 1350, background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.08) 55%, rgba(0,0,0,0.92) 100%)'});
+  h('div', {position: 'absolute', top: 0, left: 0, width: 1080, height: 1350, background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.05) 26%, rgba(0,0,0,0.25) 48%, rgba(0,0,0,0.88) 72%, rgba(0,0,0,0.97) 100%)'});
 
 const credit = (card) =>
   card.image ? h('div', {position: 'absolute', top: 20, left: 22, fontSize: 17, color: 'rgba(255,255,255,0.62)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`) : null;
@@ -86,10 +101,13 @@ export const templates = {
       credit(card),
       h(
         'div',
-        {position: 'absolute', left: 60, right: 60, bottom: 64, display: 'flex', flexDirection: 'column'},
-        accented(card.headline, card.highlights, card.headline.length > 90 ? 58 : 74, 'dark'),
+        {position: 'absolute', left: 64, right: 50, bottom: 76, display: 'flex', flexDirection: 'column'},
+        accented(card.headline, card.highlights, fitHeadline(card.headline), 'dark', {
+          lineHeight: 1.04,
+          letterSpacing: -3,
+        }),
         card.subtitle
-          ? h('div', {display: 'flex', fontFamily: 'Lora', fontSize: 32, lineHeight: 1.4, color: 'rgba(255,255,255,0.9)', marginTop: 22}, card.subtitle)
+          ? h('div', {display: 'flex', fontSize: 31, fontWeight: 400, lineHeight: 1.35, color: 'rgba(255,255,255,0.85)', marginTop: 26}, card.subtitle)
           : null,
       ),
       pager(card.page, 'rgba(255,255,255,0.7)'),
