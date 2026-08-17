@@ -50,7 +50,7 @@ export async function writeCarouselScript(story, detail) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [
         {role: 'system', content: PROMPT},
         {role: 'user', content: JSON.stringify(synthesis)},
