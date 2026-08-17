@@ -48,12 +48,16 @@ const hero = story.imagem?.url
   ? {url: story.imagem.url, credit: `Foto: ${story.imagem.fonte}`}
   : null;
 const articleById = new Map((detail.artigos ?? []).map((a) => [a.id, a]));
+// Distinct images only, consumed at most once each: a 2-article event
+// yields clean no-photo cards instead of the same photo three times.
+const seenUrls = new Set(hero?.url ? [hero.url] : []);
 const articleImages = (detail.artigos ?? [])
-  .filter((a) => a.imageUrl && a.imageUrl !== hero?.url)
+  .filter((a) => a.imageUrl && !seenUrls.has(a.imageUrl) && seenUrls.add(a.imageUrl))
   .map((a) => ({url: a.imageUrl, credit: `Foto: ${a.sourceName}`}));
 
 const base = {brand: 'o agêntico', handle: '@oagentico'};
-const cta = {...base, kicker: 'o futuro da IA, todo dia, num clique', headline: '@oagentico', image: hero, variant: 'cta'};
+// brand card: no news photo — avoids guaranteed hero repetition
+const cta = {...base, kicker: 'o futuro da IA, todo dia, num clique', headline: '@oagentico', image: null, variant: 'cta'};
 const CTA_LINE = 'Siga @oagentico — o futuro da IA, todo dia, num clique.';
 const TAGS = '#inteligenciaartificial #ia #tecnologia #noticias';
 
@@ -65,13 +69,18 @@ if (mode === 'claims') {
     .sort((a, b) => (b.articleIds?.length ?? 0) - (a.articleIds?.length ?? 0))
     .slice(chunk * CLAIMS_PER_CAROUSEL, (chunk + 1) * CLAIMS_PER_CAROUSEL);
   if (claims.length === 0) throw new Error(`Sem claims no chunk ${chunk}`);
+  const usedByClaims = new Set(hero?.url ? [hero.url] : []);
   middleCards = claims.map((c, i) => {
-    const article = (c.articleIds ?? []).map((id) => articleById.get(id)).find((a) => a?.imageUrl);
+    // first article image not shown yet in this carousel; none → clean card
+    const article = (c.articleIds ?? [])
+      .map((id) => articleById.get(id))
+      .find((a) => a?.imageUrl && !usedByClaims.has(a.imageUrl));
+    if (article) usedByClaims.add(article.imageUrl);
     return {
       ...base,
       kicker: `O fato · ${chunk * CLAIMS_PER_CAROUSEL + i + 1}`,
       headline: c.texto,
-      image: article ? {url: article.imageUrl, credit: `Foto: ${article.sourceName}`} : hero,
+      image: article ? {url: article.imageUrl, credit: `Foto: ${article.sourceName}`} : null,
       variant: 'body',
     };
   });
@@ -92,7 +101,7 @@ if (mode === 'claims') {
     ...base,
     kicker: `Em resumo · ${i + 1}/${sentences.length}`,
     headline: sentence,
-    image: articleImages[i % Math.max(articleImages.length, 1)] ?? null,
+    image: articleImages[i] ?? null,
     variant: 'body',
   }));
   caption = [

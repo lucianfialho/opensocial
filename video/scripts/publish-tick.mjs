@@ -15,11 +15,13 @@ const cli = join(root, '..', 'cli', 'dist', 'index.js');
 const API = 'https://oagentico.com.br/api/v1';
 const STATE_FILE = join(homedir(), '.config', 'opensocial', 'oagentico-queue.json');
 
-// pacing knobs — ramp these up once the account has API history
+// pacing knobs — the ceiling is Meta's action block, not hardware, so ramp
+// in steps (6 → 8 → 12) watching for 2207051. Overridable per machine via
+// env/.env so a ramp step is a unit edit, not a deploy.
 const ACTIVE_HOURS = [8, 22]; // local time window
-const REELS_PER_DAY = 4;
-const POSTS_PER_DAY = 6;
-const MIN_GAP_MINUTES = 50;
+const REELS_PER_DAY = Number(envValue('OPENSOCIAL_REELS_PER_DAY') ?? 4);
+const POSTS_PER_DAY = Number(envValue('OPENSOCIAL_POSTS_PER_DAY') ?? 6);
+const MIN_GAP_MINUTES = Number(envValue('OPENSOCIAL_MIN_GAP_MINUTES') ?? 50);
 const CLAIM_CHUNKS_PER_EVENT = 2;
 // Machine slice: which content types THIS machine ingests and publishes.
 // Set OPENSOCIAL_TICK_TYPES=reel (desktop) or =carousel (VPS) in the unit
