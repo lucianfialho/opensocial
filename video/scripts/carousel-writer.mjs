@@ -19,6 +19,7 @@ Regras:
 - Em cada card, "accent" é um trecho EXATO (copiado letra a letra) do headline daquele card, com NO MÁXIMO 4 palavras — nunca o headline inteiro
 - Estilos de card do miolo: "photo" (frase forte, vai sobre foto), "essay" (headline + 2-3 parágrafos curtos + closer em negrito), "cream" (respiro: parágrafo de contexto + afirmação forte)
 - Use "essay" para o desenvolvimento (o porquê importa), "photo" para fatos de impacto, "cream" no máximo 1x
+- Se houver "imagens" no input: cada card "photo" DEVE indicar "imageIndex" (o índice da imagem escolhida). REGRA DURA: imagem com pessoa_identificavel=true só pode ilustrar card cujo texto cite essa pessoa pelo nome; nunca associe o rosto de alguém a fato que não é sobre essa pessoa. Sem imagem pertinente e segura? Use "essay" ou "cream". Nunca repita imageIndex
 - Nunca invente fato que não esteja na síntese; números sempre preservados
 - caption: legenda completa do post (gancho + resumo em 2-3 linhas + "Apuração: N veículos independentes." + CTA "Siga @oagentico" + 4 hashtags)
 
@@ -27,7 +28,7 @@ Responda SÓ com JSON válido:
  "cards": [{"style": "photo|essay|cream", "kicker": "...", "headline": "...", "accent": "...", "paragraphs": ["..."], "closer": "...", "intro": "..."}],
  "caption": "..."}`;
 
-export async function writeCarouselScript(story, detail) {
+export async function writeCarouselScript(story, detail, images = []) {
   mkdirSync(join(root, 'out', 'carousel'), {recursive: true});
   const cachePath = join(root, 'out', 'carousel', `news-${story.id}.script.json`);
   // a ready script needs no API key — cache first
@@ -36,11 +37,18 @@ export async function writeCarouselScript(story, detail) {
   const apiKey = envValue('AI_GATEWAY_API_KEY');
   if (!apiKey) return null;
 
+  let imagens = [];
+  if (images.length > 0) {
+    const {describeImages} = await import('./image-vision.mjs');
+    imagens = await describeImages(images, apiKey);
+    console.log(`vision: ${imagens.length} imagens analisadas (${imagens.filter((i) => i.pessoa_identificavel).length} com pessoa identificável)`);
+  }
   const synthesis = {
     titulo: story.title,
     resumo: detail.summary,
     fatos: (detail.claims ?? []).map((c) => c.texto),
     veiculosIndependentes: story.independentSources,
+    imagens,
   };
   for (let attempt = 1; attempt <= 2; attempt++) {
   const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {

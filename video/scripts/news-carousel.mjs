@@ -99,9 +99,9 @@ if (mode === 'claims') {
 } else {
   // LLM scriptwriter first (needs ANTHROPIC_API_KEY); mechanical fallback
   const {writeCarouselScript} = await import('./carousel-writer.mjs');
-  const script = await writeCarouselScript(story, detail);
+  const script = await writeCarouselScript(story, detail, articleImages);
   if (script) {
-    let imgCursor = 0;
+    const usedImages = new Set();
     let essayCount = 0;
     const clean = (t) => (t ?? '').replaceAll('**', '');
     middleCards = script.cards.map((c) => {
@@ -117,8 +117,11 @@ if (mode === 'claims') {
           image: null,
         };
       }
-      if (c.style === 'photo' && articleImages[imgCursor]) {
-        return {...common, variant: 'body', image: articleImages[imgCursor++]};
+      // photo cards carry the writer's image pick (vision-screened); a card
+      // without a valid, unused pick degrades to a clean text card
+      if (c.style === 'photo' && Number.isInteger(c.imageIndex) && articleImages[c.imageIndex] && !usedImages.has(c.imageIndex)) {
+        usedImages.add(c.imageIndex);
+        return {...common, variant: 'body', image: articleImages[c.imageIndex]};
       }
       // cream: any body text the writer produced becomes the context intro
       const intro = clean(c.intro) || (c.paragraphs ?? []).map(clean).join(' ');
