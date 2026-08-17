@@ -63,6 +63,7 @@ const TAGS = '#inteligenciaartificial #ia #tecnologia #noticias';
 
 let middleCards;
 let caption;
+let coverOverride = null;
 if (mode === 'claims') {
   const claims = (detail.claims ?? [])
     .slice()
@@ -96,29 +97,68 @@ if (mode === 'claims') {
     TAGS,
   ].join('\n');
 } else {
-  const sentences = splitSentences(detail.summary ?? '').slice(0, 3);
-  middleCards = sentences.map((sentence, i) => ({
-    ...base,
-    kicker: `Em resumo · ${i + 1}/${sentences.length}`,
-    headline: sentence,
-    image: articleImages[i] ?? null,
-    variant: 'body',
-  }));
-  caption = [
-    story.title,
-    '',
-    detail.summary ?? '',
-    '',
-    `Apuração: ${story.independentSources} veículos independentes.`,
-    '',
-    CTA_LINE,
-    '',
-    TAGS,
-  ].join('\n');
+  // LLM scriptwriter first (needs ANTHROPIC_API_KEY); mechanical fallback
+  const {writeCarouselScript} = await import('./carousel-writer.mjs');
+  const script = await writeCarouselScript(story, detail);
+  if (script) {
+    let imgCursor = 0;
+    let essayCount = 0;
+    middleCards = script.cards.map((c) => {
+      const common = {...base, kicker: c.kicker ?? '', headline: c.headline, highlights: c.accent ? [c.accent] : []};
+      if (c.style === 'essay') {
+        essayCount += 1;
+        return {...common, variant: 'essay', paragraphs: c.paragraphs ?? [], closer: c.closer, numeral: String(essayCount + 1), image: null};
+      }
+      if (c.style === 'photo' && articleImages[imgCursor]) {
+        return {...common, variant: 'body', image: articleImages[imgCursor++]};
+      }
+      return {...common, variant: 'body', intro: c.intro, image: null};
+    });
+    caption = script.caption;
+    coverOverride = {
+      headline: script.cover.headline,
+      highlights: script.cover.accent ? [script.cover.accent] : [],
+      subtitle: script.cover.subtitle,
+    };
+  } else {
+    const sentences = splitSentences(detail.summary ?? '').slice(0, 3);
+    const leftovers = splitSentences(detail.summary ?? '').slice(3).join(' ');
+    let introUsed = false;
+    middleCards = sentences.map((sentence, i) => {
+      const image = articleImages[i] ?? null;
+      const intro = !image && !introUsed && leftovers ? ((introUsed = true), leftovers) : undefined;
+      return {
+        ...base,
+        kicker: `Em resumo · ${i + 1}/${sentences.length}`,
+        headline: sentence,
+        image,
+        intro,
+        variant: 'body',
+      };
+    });
+    caption = [
+      story.title,
+      '',
+      detail.summary ?? '',
+      '',
+      `Apuração: ${story.independentSources} veículos independentes.`,
+      '',
+      CTA_LINE,
+      '',
+      TAGS,
+    ].join('\n');
+  }
 }
 
-const cover = {...base, kicker: mode === 'claims' ? `Os fatos · parte ${chunk + 1}` : 'IA & Tech', headline: story.title, image: hero, variant: 'title'};
-const cards = [cover, ...middleCards, cta].map((c) => ({...c, fit: 'cover'}));
+const cover = {
+  ...base,
+  kicker: mode === 'claims' ? `Os fatos · parte ${chunk + 1}` : 'IA & Tech',
+  headline: story.title,
+  image: hero,
+  variant: 'title',
+  ...(coverOverride ?? {}),
+};
+const cards = [cover, ...middleCards, cta].map((c, i, arr) => ({...c, fit: 'cover', page: `${i + 1}/${arr.length}`}));
 
 mkdirSync(join(root, 'out', 'carousel'), {recursive: true});
 const slug = `news-${story.id}-${mode}${mode === 'claims' ? chunk : ''}`;
