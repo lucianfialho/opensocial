@@ -79,9 +79,10 @@ if (!force && (hour < ACTIVE_HOURS[0] || hour >= ACTIVE_HOURS[1])) {
   process.exit(0);
 }
 
-// 1. refresh queue with unseen events from the last 2 days
-const since = new Date(Date.now() - 2 * 86400_000).toISOString().slice(0, 10);
-const res = await fetch(`${API}/eventos?desde=${since}&limite=20`, {
+// 1. refresh queue with unseen events. No `desde` filter: it cut by cluster
+// BIRTH date, hiding developing stories in old clusters (the exact failure
+// the API's activity ordering fixed) — the top-20 by activity IS the window.
+const res = await fetch(`${API}/eventos?limite=20`, {
   headers: {Authorization: `Bearer ${token}`},
 });
 if (!res.ok) throw new Error(`API ${res.status}`);
