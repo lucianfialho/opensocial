@@ -21,7 +21,13 @@ const REELS_PER_DAY = 4;
 const POSTS_PER_DAY = 6;
 const MIN_GAP_MINUTES = 50;
 const CLAIM_CHUNKS_PER_EVENT = 2;
-const CAROUSELS_ENABLED = true; // unblocked 15/ago: image containers need a status poll before publish (2207027)
+// Machine slice: which content types THIS machine ingests and publishes.
+// Set OPENSOCIAL_TICK_TYPES=reel (desktop) or =carousel (VPS) in the unit
+// or packages/video/.env; unset = both (single-machine mode).
+const TICK_TYPES = new Set(
+  (envValue('OPENSOCIAL_TICK_TYPES') ?? 'reel,carousel')
+    .split(',').map((s) => s.trim()).filter(Boolean),
+);
 
 const dry = process.argv.includes('--dry');
 const force = process.argv.includes('--force');
@@ -35,6 +41,36 @@ const save = () => {
   mkdirSync(dirname(STATE_FILE), {recursive: true});
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 };
+
+// Write-ahead recovery: a pending marker means a previous tick died between
+// media_publish and the state save. Republishing could duplicate the post,
+// so treat it as published (worst case: one lost post, never a double).
+if (state.pending) {
+  log(`RECUPERAÇÃO: tick anterior morreu publicando ${state.pending.key} — marcando como publicado por segurança (verificar o feed).`);
+  state.published[state.pending.key] = {
+    day: (state.pending.at ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+    type: state.pending.item?.type,
+    at: state.pending.at,
+    title: state.pending.item?.title,
+    via: 'recovered-after-crash',
+  };
+  const pendingKey = state.pending.key;
+  state.queue = state.queue.filter(
+    (i) => `${i.type}:${i.mode ?? ''}:${i.chunk ?? 0}:${i.id}` !== pendingKey,
+  );
+  delete state.pending;
+  save();
+}
+
+// Machine slice: drop queue items that belong to the other machine.
+{
+  const before = state.queue.length;
+  state.queue = state.queue.filter((i) => TICK_TYPES.has(i.type));
+  if (state.queue.length !== before) {
+    log(`fatia [${[...TICK_TYPES]}]: ${before - state.queue.length} itens de outros tipos removidos da fila.`);
+    save();
+  }
+}
 
 const hour = new Date().getHours();
 if (!force && (hour < ACTIVE_HOURS[0] || hour >= ACTIVE_HOURS[1])) {
@@ -56,13 +92,17 @@ for (const event of dados.sort((a, b) => b.independentSources - a.independentSou
   ).json();
   const claimCount = detail.dados?.claims?.length ?? 0;
   const chunks = Math.min(CLAIM_CHUNKS_PER_EVENT, Math.floor(claimCount / 4));
-  state.queue.push({type: 'reel', id: event.id, title: event.title});
-  state.queue.push({type: 'carousel', mode: 'resumo', id: event.id, title: event.title});
+  const pieces = [
+    {type: 'reel', id: event.id, title: event.title},
+    {type: 'carousel', mode: 'resumo', id: event.id, title: event.title},
+  ];
   for (let c = 0; c < chunks; c++) {
-    state.queue.push({type: 'carousel', mode: 'claims', chunk: c, id: event.id, title: event.title});
+    pieces.push({type: 'carousel', mode: 'claims', chunk: c, id: event.id, title: event.title});
   }
+  const mine = pieces.filter((p) => TICK_TYPES.has(p.type));
+  state.queue.push(...mine);
   state.seen[event.id] = new Date().toISOString();
-  log(`evento novo #${event.id} → 1 reel + ${1 + chunks} carrosséis na fila`);
+  log(`evento novo #${event.id} → ${mine.length} item(ns) da nossa fatia na fila`);
 }
 // newest first: news value decays fast, the backlog can wait
 // (stable sort keeps reel → carousels order within the same event)
@@ -88,8 +128,9 @@ if (!force && minutesSinceLast < MIN_GAP_MINUTES) {
 
 // 3. pick the first eligible item
 const idx = state.queue.findIndex((item) => {
+  if (!TICK_TYPES.has(item.type)) return false;
   if (item.type === 'reel') return force || reelsToday < REELS_PER_DAY;
-  return CAROUSELS_ENABLED;
+  return true;
 });
 if (idx === -1) {
   log('fila vazia ou sem item elegível — encerrando.');
@@ -120,17 +161,23 @@ if (dry) {
   log(`--dry: pulando publicação de ${media.length} arquivo(s).`);
   process.exit(0);
 }
+// write-ahead: if we die between media_publish and the post-success save,
+// the next tick finds this marker and does NOT republish.
+state.pending = {key, at: new Date().toISOString(), item};
+save();
 try {
   execFileSync('node', [cli, 'post', '--to', 'instagram', '--text', caption, '--media', ...media], {
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
   });
 } catch (err) {
+  delete state.pending;
   const output = `${err.stdout ?? ''}${err.stderr ?? ''}`;
   if (output.includes('2207051') || output.includes('Application request limit')) {
     // account/app action block — not the item's fault; keep it in place and
     // let the next hourly tick try again after the block lifts
     log('conta com action block (2207051) — item mantido, tentando na próxima hora.');
+    save();
     process.exit(0);
   }
   // genuine item failure: send to the back, discard after 3 strikes
@@ -146,6 +193,7 @@ try {
   process.exit(0);
 }
 
+delete state.pending;
 state.queue.splice(idx, 1);
 state.published[key] = {day: today, type: item.type, at: new Date().toISOString(), title: item.title};
 state.lastPublishedAt = new Date().toISOString();

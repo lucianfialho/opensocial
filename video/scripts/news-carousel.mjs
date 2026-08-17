@@ -117,7 +117,12 @@ const files = [];
 cards.forEach((card, i) => {
   const output = join('out', 'carousel', `${slug}-slide-${i + 1}.jpg`);
   console.log(`rendering ${output}`);
-  execFileSync('npx', ['remotion', 'still', 'PhotoCard', output, '--image-format=jpeg', '--timeout=120000', `--props=${JSON.stringify(card)}`], {cwd: root, stdio: 'inherit'});
+  // REMOTION_BROWSER_EXECUTABLE: reuse a pre-installed chrome-headless-shell
+  // instead of letting Remotion download its own (saves 193MB on servers).
+  const browserArgs = process.env.REMOTION_BROWSER_EXECUTABLE
+    ? [`--browser-executable=${process.env.REMOTION_BROWSER_EXECUTABLE}`]
+    : [];
+  execFileSync('npx', ['remotion', 'still', 'PhotoCard', output, '--image-format=jpeg', '--timeout=120000', ...browserArgs, `--props=${JSON.stringify(card)}`], {cwd: root, stdio: 'inherit'});
   files.push(join(root, output));
 });
 
