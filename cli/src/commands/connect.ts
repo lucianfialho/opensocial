@@ -7,7 +7,7 @@ import {
 // Meta rejects http:// redirect URIs, so Instagram uses the https callback
 // with a self-signed localhost cert (the browser shows a warning once —
 // choose Advanced > Continue).
-const NEEDS_TLS: Record<Platform, boolean> = { instagram: true, tiktok: false }
+const NEEDS_TLS: Record<Platform, boolean> = { instagram: true, tiktok: false, youtube: false }
 
 export async function connectCommand(platform: string): Promise<void> {
   if (!(platform in adapters)) throw new Error(`Unknown platform "${platform}". Supported: ${Object.keys(adapters).join(', ')}`)

@@ -11,6 +11,7 @@ import type {
 } from './types.js'
 import { instagramAdapter } from './adapters/instagram.js'
 import { tiktokAdapter } from './adapters/tiktok.js'
+import { youtubeAdapter } from './adapters/youtube.js'
 
 export interface PlatformAdapter {
   platform: Platform
@@ -43,4 +44,5 @@ export interface AdapterPublishOptions {
 export const adapters: Record<Platform, PlatformAdapter> = {
   instagram: instagramAdapter,
   tiktok: tiktokAdapter,
+  youtube: youtubeAdapter,
 }

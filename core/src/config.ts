@@ -24,6 +24,7 @@ export type MediaHostConfig = S3MediaHostConfig | VercelBlobMediaHostConfig
 export interface AppConfig {
   instagram?: AppCredentials
   tiktok?: AppCredentials & { privacyLevel?: string }
+  youtube?: AppCredentials
   mediaHost?: MediaHostConfig
 }
 
