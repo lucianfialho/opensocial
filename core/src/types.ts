@@ -23,7 +23,7 @@ export interface Account {
 }
 
 export interface ValidationIssue { platform: Platform; message: string }
-export interface PublishResult { platform: Platform; id: string; url?: string }
+export interface PublishResult { platform: Platform; id: string; url?: string; note?: string }
 
 export type PlatformResult =
   | { platform: Platform; status: 'published'; id: string; url?: string }

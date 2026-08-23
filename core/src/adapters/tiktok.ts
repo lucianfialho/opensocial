@@ -44,7 +44,7 @@ export const tiktokAdapter: PlatformAdapter = {
     const u = new URL('https://www.tiktok.com/v2/auth/authorize/')
     u.searchParams.set('client_key', creds.clientId)
     u.searchParams.set('response_type', 'code')
-    u.searchParams.set('scope', 'user.info.basic,video.publish')
+    u.searchParams.set('scope', 'user.info.basic,video.publish,video.upload')
     u.searchParams.set('redirect_uri', redirectUri)
     u.searchParams.set('state', state)
     return u.toString()
@@ -119,17 +119,37 @@ export const tiktokAdapter: PlatformAdapter = {
       if (size > MAX_VIDEO_BYTES) {
         throw new MediaRejectedError(`Video is ${(size / 1024 / 1024).toFixed(1)}MB; v1 supports videos up to 64MB (single-chunk upload).`)
       }
-      const init = await tiktokJson<{ publish_id: string; upload_url: string }>(
-        await fetchImpl(`${API}/post/publish/video/init/`, {
-          method: 'POST',
-          headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-          body: JSON.stringify({
-            post_info: { title: post.text, privacy_level: privacy },
-            source_info: { source: 'FILE_UPLOAD', video_size: size, chunk_size: size, total_chunk_count: 1 },
+      // Direct post first; an unaudited app gets refused for public accounts,
+      // and we fall back to the INBOX (drafts) route: the video lands in the
+      // user's TikTok drafts and they finish publishing in-app. When the app
+      // passes review, direct post starts working with no code change.
+      const sourceInfo = { source: 'FILE_UPLOAD', video_size: size, chunk_size: size, total_chunk_count: 1 }
+      let init: { publish_id: string; upload_url: string }
+      let viaDraft = false
+      try {
+        init = await tiktokJson<{ publish_id: string; upload_url: string }>(
+          await fetchImpl(`${API}/post/publish/video/init/`, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+            body: JSON.stringify({
+              post_info: { title: post.text, privacy_level: privacy },
+              source_info: sourceInfo,
+            }),
           }),
-        }),
-        'video init',
-      )
+          'video init',
+        )
+      } catch (err) {
+        if (!(err instanceof ApiError) || !/unaudited_client/.test(err.message)) throw err
+        viaDraft = true
+        init = await tiktokJson<{ publish_id: string; upload_url: string }>(
+          await fetchImpl(`${API}/post/publish/inbox/video/init/`, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ source_info: sourceInfo }),
+          }),
+          'draft init',
+        )
+      }
       const bytes = readFileSync(video.filePath!)
       const up = await fetchImpl(init.upload_url, {
         method: 'PUT',
@@ -138,7 +158,12 @@ export const tiktokAdapter: PlatformAdapter = {
       })
       if (!up.ok) throw new ApiError(`TikTok video upload failed (${up.status})`, up.status)
       await waitForPublish(init.publish_id, token, fetchImpl)
-      return { platform: 'tiktok', id: init.publish_id, url: undefined }
+      return {
+        platform: 'tiktok',
+        id: init.publish_id,
+        url: undefined,
+        note: viaDraft ? 'enviado como RASCUNHO — finalize a publicação no app do TikTok' : undefined,
+      }
     }
 
     const init = await tiktokJson<{ publish_id: string }>(
