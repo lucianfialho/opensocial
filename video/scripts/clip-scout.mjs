@@ -9,7 +9,7 @@ import {homedir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
-import {judgeEvent, searchYouTube, searchTavily, canDownload, notify} from './clip-scout-lib.mjs';
+import {judgeEvent, searchYouTube, searchTavily, searchRadarX, judgeRadarFind, canDownload, notify} from './clip-scout-lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API = 'https://oagentico.com.br/api/v1';
@@ -65,6 +65,38 @@ for (const event of dados.slice(0, top)) {
   });
 }
 
+// ---- RADAR: vídeos bombando no X, independente da cobertura do site ----
+// verificação editorial aqui é HUMANA — os candidatos chegam marcados 🌐
+let radarCount = 0;
+for (const find of await searchRadarX()) {
+  if (radarCount >= 2) break; // máx 2 por rodada, sem spam
+  if (seen[find.url]) continue;
+  seen[find.url] = new Date().toISOString();
+  let screen;
+  try {
+    screen = await judgeRadarFind(find.title, find.url);
+  } catch { continue; }
+  if (!screen.vale) {
+    log(`radar: reprovado (${screen.motivo ?? 's/ motivo'}) — ${find.title.slice(0, 50)}`);
+    continue;
+  }
+  if (!canDownload(find.url)) {
+    log(`radar: não baixa daqui — ${find.url.slice(0, 60)}`);
+    continue;
+  }
+  const radarId = 90000 + (Object.keys(seen).length % 9000);
+  candidates.push({
+    eventId: radarId,
+    radar: true,
+    title: find.title.slice(0, 90),
+    headline: screen.headline,
+    best: {...find, views: 0, duration: 0},
+    alternatives: [],
+  });
+  radarCount += 1;
+  log(`radar: CANDIDATO #${radarId} — ${screen.headline}`);
+}
+
 writeFileSync(STATE, JSON.stringify(seen, null, 2));
 // candidates persist with status so the Telegram approver can act on them
 const CANDS = join(homedir(), '.config', 'opensocial', 'clip-candidates.json');
@@ -84,13 +116,14 @@ for (const c of candidates) {
     ? `node scripts/tweet-clip.mjs --url="${c.best.url}" --headline="${c.headline}" --credit="${c.best.title.split('|')[0].trim().slice(0, 40)}" --max=60`
     : '(escolher URL manualmente entre as alternativas)';
   const msg = [
-    `🎬 CANDIDATO A REEL — evento #${c.eventId}`,
+    c.radar ? `🌐 RADAR (fora do site) — #${c.eventId}` : `🎬 CANDIDATO A REEL — evento #${c.eventId}`,
     c.title,
     '',
     `Manchete sugerida: ${c.headline}`,
     c.best ? `Melhor vídeo: ${c.best.url} (${c.best.views.toLocaleString('pt-BR')} views, ${c.best.duration}s)` : 'Sem vídeo no YouTube; ver alternativas do X:',
     ...c.alternatives.slice(0, 3).map((a) => `· ${a.source}: ${a.url}`),
     '',
+    c.radar ? '⚠️ Não coberto pelo site — a verificação é sua.' : '',
     c.best ? `Responda "publica ${c.eventId}" para postar, ou "pula ${c.eventId}".` : 'Sem vídeo direto — escolher URL manualmente.',
     '',
     `(manual: ${cmd})`,

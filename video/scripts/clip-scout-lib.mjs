@@ -102,3 +102,51 @@ export async function notify(text) {
   });
   return res.ok;
 }
+
+/** Radar: trending AI/tech videos on X from the last day, regardless of
+ *  the site's coverage. Editorial verification shifts to the human. */
+export async function searchRadarX() {
+  const key = envValue('TAVILY_API_KEY');
+  if (!key) return [];
+  const queries = [
+    'viral AI video demo',
+    'humanoid robot video incredible',
+    'new AI tool demo video',
+  ];
+  const found = new Map();
+  for (const q of queries) {
+    try {
+      const res = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: {'content-type': 'application/json', authorization: `Bearer ${key}`},
+        body: JSON.stringify({query: q, include_domains: ['x.com'], max_results: 5, days: 1, topic: 'news'}),
+      });
+      if (!res.ok) continue;
+      for (const r of (await res.json()).results ?? []) {
+        if (/\/status\/\d+/.test(r.url)) found.set(r.url, {url: r.url, title: r.title ?? '', source: 'X'});
+      }
+    } catch {}
+  }
+  return [...found.values()];
+}
+
+/** LLM screen for a radar find: on-topic, credible, headline-worthy? */
+export async function judgeRadarFind(title, url) {
+  const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
+    method: 'POST',
+    headers: {authorization: `Bearer ${envValue('AI_GATEWAY_API_KEY')}`, 'content-type': 'application/json'},
+    body: JSON.stringify({
+      model: envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash',
+      max_tokens: 1024,
+      messages: [
+        {role: 'system', content: `Você faz triagem de vídeos virais para o @oagentico (notícias de IA/tech, Brasil). Aprova só o que é: sobre IA/robótica/tech, visualmente interessante, e crível (nada com cara de fake/fora de contexto/cringe de marketing). Responda SÓ JSON:
+{"vale": true/false, "headline": "manchete pt-BR máx 12 palavras", "motivo": "1 frase"}`},
+        {role: 'user', content: JSON.stringify({titulo: title, url})},
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`gateway ${res.status}`);
+  const data = await res.json();
+  const text = (data.choices?.[0]?.message?.content ?? '').replace(/```(?:json)?/g, '');
+  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+}
