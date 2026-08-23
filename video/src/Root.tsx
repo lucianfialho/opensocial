@@ -3,6 +3,7 @@ import {Composition, Still} from 'remotion';
 import {ArticleHighlight} from './ArticleHighlight';
 import {NewsReel, calculateNewsReelMetadata, newsReelSchema} from './NewsReel';
 import {NewsSplit, calculateNewsSplitMetadata, newsSplitSchema} from './NewsSplit';
+import {TweetClip, calculateTweetClipMetadata, tweetClipSchema} from './TweetClip';
 import {PhotoCard, photoCardSchema} from './PhotoCard';
 import {ProfilePic, profilePicSchema} from './ProfilePic';
 import {TextArticle, textArticleSchema} from './TextArticle';
@@ -180,6 +181,23 @@ export const RemotionRoot: React.FC = () => {
           tagline: 'o futuro da IA, todo dia, num clique',
           personaSrc: 'persona/news-1709-7292732b.mp4',
           narration: null,
+        }}
+      />
+      <Composition
+        id="TweetClip"
+        component={TweetClip}
+        schema={tweetClipSchema}
+        calculateMetadata={calculateTweetClipMetadata}
+        durationInFrames={300}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          headline: 'Manchete de exemplo sobre o vídeo que está bombando',
+          credit: 'via @fonte',
+          videoSrc: 'persona/news-1709-vQFjkHka47-7292732b.mp4',
+          videoDurationInFrames: 300,
+          videoAspect: 1.33,
         }}
       />
       <Composition
