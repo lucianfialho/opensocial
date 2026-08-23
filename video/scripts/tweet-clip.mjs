@@ -28,6 +28,16 @@ if (!url || !headline) {
   process.exit(1);
 }
 
+// network label from the source URL; credit never carries "@" — on
+// Instagram that would mention an unrelated IG profile
+const network = /x\.com|twitter\.com/.test(url) ? 'X'
+  : /youtube\.com|youtu\.be/.test(url) ? 'YouTube'
+  : /tiktok\.com/.test(url) ? 'TikTok'
+  : /reddit\.com/.test(url) ? 'Reddit' : '';
+const creditText = credit
+  ? `via ${credit.replace(/^via\s+/i, '').replace(/^@/, '')}${network ? ` · ${network}` : ''}`
+  : '';
+
 const slug = createHash('md5').update(url).digest('hex').slice(0, 8);
 mkdirSync(join(root, 'public', 'clips'), {recursive: true});
 const rel = `clips/${slug}.mp4`;
