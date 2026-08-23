@@ -42,7 +42,19 @@ function publish(cand) {
 }
 
 async function handle(text) {
-  const m = text.trim().toLowerCase().match(/^(publica|pula)\s+#?(\d+)/);
+  const t = text.trim().toLowerCase();
+  // "busca" dispara uma rodada do scout na hora
+  if (/^(busca|procura|scout)\b/.test(t)) {
+    await notify('🔎 Caçando vídeos no topo editorial...');
+    try {
+      execFileSync('node', ['scripts/clip-scout.mjs', '--top=5'], {cwd: root, stdio: 'inherit', timeout: 15 * 60_000});
+      await notify('Rodada concluída — se nenhum candidato chegou acima, não havia vídeo óbvio no top-5 novo.');
+    } catch (err) {
+      await notify(`❌ scout falhou: ${String(err.message).slice(0, 150)}`);
+    }
+    return;
+  }
+  const m = t.match(/^(publica|pula)\s+#?(\d+)/);
   if (!m) return;
   const [, verb, id] = m;
   const book = readJson(CANDS, {});
