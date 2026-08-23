@@ -107,6 +107,12 @@ for (;;) {
     writeFileSync(OFFSET, JSON.stringify({last: u.update_id}));
     const msg = u.message;
     if (!msg || String(msg.chat?.id) !== CHAT || !msg.text) continue;
-    await handle(msg.text);
+    log(`comando recebido: ${msg.text.slice(0, 60)}`);
+    try {
+      await handle(msg.text);
+    } catch (err) {
+      log(`handle falhou: ${err.message}`);
+      await notify(`❌ deu ruim processando "${msg.text.slice(0, 30)}": ${String(err.message).slice(0, 120)}`);
+    }
   }
 }

@@ -101,12 +101,17 @@ export async function notify(text) {
   const token = envValue('TELEGRAM_BOT_TOKEN');
   const chat = envValue('TELEGRAM_CHAT_ID');
   if (!token || !chat) return false;
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: {'content-type': 'application/json'},
-    body: JSON.stringify({chat_id: chat, text, disable_web_page_preview: false}),
-  });
-  return res.ok;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({chat_id: chat, text, disable_web_page_preview: false}),
+      signal: AbortSignal.timeout(15_000),
+    });
+    return res.ok;
+  } catch {
+    return false; // notificação nunca pode travar ou derrubar o chamador
+  }
 }
 
 /** Radar: trending AI/tech videos on X from the last day, regardless of
