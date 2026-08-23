@@ -9,7 +9,7 @@ import {homedir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
-import {judgeEvent, searchYouTube, searchTavily, notify} from './clip-scout-lib.mjs';
+import {judgeEvent, searchYouTube, searchTavily, canDownload, notify} from './clip-scout-lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API = 'https://oagentico.com.br/api/v1';
@@ -45,8 +45,14 @@ for (const event of dados.slice(0, top)) {
   log(`#${event.id}: TEM VÍDEO → buscando "${verdict.query}"`);
   const yt = searchYouTube(verdict.query).filter((v) => v.duration >= 8 && v.duration <= 240);
   const x = await searchTavily(verdict.query);
-  const best = [...yt].sort((a, b) => b.views - a.views)[0];
-  if (!best && x.length === 0) {
+  // best = highest-ranked candidate that THIS machine can actually download
+  const pool = [...yt.sort((a, b) => b.views - a.views), ...x];
+  let best = null;
+  for (const cand of pool.slice(0, 6)) {
+    if (canDownload(cand.url)) { best = cand; break; }
+    log(`#${event.id}: ${cand.url.slice(0, 60)} não baixa daqui — tentando próximo`);
+  }
+  if (!best && pool.length === 0) {
     log(`#${event.id}: nada encontrado`);
     continue;
   }

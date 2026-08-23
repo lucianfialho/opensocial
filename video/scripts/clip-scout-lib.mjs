@@ -63,13 +63,30 @@ export async function searchTavily(query) {
     const res = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: {'content-type': 'application/json', authorization: `Bearer ${key}`},
-      body: JSON.stringify({query: `${query} video`, include_domains: ['x.com', 'twitter.com'], max_results: 5}),
+      body: JSON.stringify({query: `${query} video`, include_domains: ['x.com', 'twitter.com', 'youtube.com'], max_results: 6}),
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).map((r) => ({url: r.url, title: r.title, views: 0, duration: 0, source: 'X'}));
+    return (data.results ?? []).map((r) => ({
+      url: r.url,
+      title: r.title,
+      views: 0,
+      duration: 0,
+      source: /youtube/.test(r.url) ? 'YouTube' : 'X',
+    }));
   } catch {
     return [];
+  }
+}
+
+/** Can THIS machine actually download the video? (datacenter IPs get
+ *  bot-checked by YouTube; X usually passes) */
+export function canDownload(url) {
+  try {
+    execFileSync('yt-dlp', ['--simulate', '--quiet', '--no-warnings', url], {timeout: 90_000, stdio: 'ignore'});
+    return true;
+  } catch {
+    return false;
   }
 }
 
