@@ -198,6 +198,7 @@ export const RemotionRoot: React.FC = () => {
           videoSrc: 'persona/news-1709-vQFjkHka47-7292732b.mp4',
           videoDurationInFrames: 300,
           videoAspect: 1.33,
+          position: 'bottom' as const,
         }}
       />
       <Composition

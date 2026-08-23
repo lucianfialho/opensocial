@@ -22,6 +22,7 @@ const url = flag('url', null);
 const headline = flag('headline', null);
 const credit = flag('credit', '');
 const maxSeconds = Number(flag('max', '90'));
+const position = flag('pos', 'bottom'); // bottom (padrão) | top
 if (!url || !headline) {
   console.error('Uso: node scripts/tweet-clip.mjs --url=<video> --headline="..." [--credit=@fonte]');
   process.exit(1);
@@ -63,6 +64,7 @@ const props = {
   videoSrc: rel,
   videoDurationInFrames: Math.floor(duration * FPS),
   videoAspect: w / h,
+  position,
 };
 
 const output = join('out', `tweetclip-${slug}.mp4`);
