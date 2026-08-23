@@ -80,7 +80,7 @@ const props = {
 const output = join('out', `tweetclip-${slug}.mp4`);
 console.log(`renderizando ${output} (${duration.toFixed(0)}s, ${w}x${h})`);
 execFileSync('npx',
-  ['remotion', 'render', 'TweetClip', output, '--timeout=120000', `--props=${JSON.stringify(props)}`],
+  ['remotion', 'render', 'TweetClip', output, '--timeout=300000', `--props=${JSON.stringify(props)}`],
   {cwd: root, stdio: 'inherit'});
 
 const caption = `${headline}${credit ? `\n\n🎥 ${credit}` : ''}\n\nSiga @oagentico — o futuro da IA, todo dia, num clique.\n\n#inteligenciaartificial #ia #tecnologia #noticias`;
