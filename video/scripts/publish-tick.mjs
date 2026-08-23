@@ -23,6 +23,10 @@ const ACTIVE_HOURS = (envValue('OPENSOCIAL_ACTIVE_HOURS') ?? '8,22').split(',').
 const REELS_PER_DAY = Number(envValue('OPENSOCIAL_REELS_PER_DAY') ?? 4);
 const POSTS_PER_DAY = Number(envValue('OPENSOCIAL_POSTS_PER_DAY') ?? 6);
 const MIN_GAP_MINUTES = Number(envValue('OPENSOCIAL_MIN_GAP_MINUTES') ?? 50);
+// Editorial selectivity: only the first N events of the API's activity
+// ranking get queued. The data said it loud: one hot story out-reached 90
+// lukewarm ones — publish the top of the news cycle, not all of it.
+const TOP_N = Number(envValue('OPENSOCIAL_TOP_N') ?? 20);
 // Machine slice: which content types THIS machine ingests and publishes.
 // Set OPENSOCIAL_TICK_TYPES=reel (desktop) or =carousel (VPS) in the unit
 // or packages/video/.env; unset = both (single-machine mode).
@@ -98,7 +102,7 @@ const {dados} = await res.json();
 // re-sorting by source count or cluster id (id order buried developing
 // stories whose cluster was born days earlier).
 const fresh = [];
-for (const event of dados) {
+for (const event of dados.slice(0, TOP_N)) {
   if (state.seen[event.id]) continue;
   // one piece per type per event: a reel and ONE carousel — the LLM-scripted
   // resumo already tells the whole story, and a second claims carousel of
