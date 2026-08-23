@@ -53,11 +53,16 @@ if (!existsSync(abs)) {
   ], {stdio: 'inherit'});
 }
 
-const probe = (entry) =>
-  execFileSync('npx', ['remotion', 'ffprobe', '-v', 'error', '-show_entries', entry,
+const probe = (args) =>
+  execFileSync('npx', ['remotion', 'ffprobe', '-v', 'error', ...args,
     '-of', 'default=noprint_wrappers=1:nokey=1', abs], {cwd: root, encoding: 'utf8'}).trim();
-let duration = parseFloat(probe('format=duration'));
-const [w, h] = probe('stream=width,height').split('\n').map(Number);
+// duration comes from the VIDEO STREAM, not the container: X/Twitter files
+// often carry a video track slightly shorter than the audio/container, and
+// asking OffthreadVideo for frames past the track's end hangs the render.
+const streamDur = parseFloat(probe(['-select_streams', 'v:0', '-show_entries', 'stream=duration']));
+const containerDur = parseFloat(probe(['-show_entries', 'format=duration']));
+let duration = Math.min(streamDur || Infinity, containerDur || Infinity);
+const [w, h] = probe(['-select_streams', 'v:0', '-show_entries', 'stream=width,height']).split('\n').map(Number);
 
 if (duration > maxSeconds) {
   console.log(`vídeo tem ${duration.toFixed(0)}s — cortando em ${maxSeconds}s`);
@@ -72,7 +77,7 @@ const props = {
   headline,
   credit: credit ? `via ${credit}` : '',
   videoSrc: rel,
-  videoDurationInFrames: Math.floor(duration * FPS),
+  videoDurationInFrames: Math.floor(duration * FPS) - 3, // safety margin off the tail
   videoAspect: w / h,
   position,
 };
