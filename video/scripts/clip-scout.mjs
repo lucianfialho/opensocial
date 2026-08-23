@@ -60,9 +60,13 @@ for (const event of dados.slice(0, top)) {
 }
 
 writeFileSync(STATE, JSON.stringify(seen, null, 2));
-mkdirSync(join(root, 'out'), {recursive: true});
-const outFile = join(root, 'out', 'clip-candidates.json');
-writeFileSync(outFile, JSON.stringify(candidates, null, 2));
+// candidates persist with status so the Telegram approver can act on them
+const CANDS = join(homedir(), '.config', 'opensocial', 'clip-candidates.json');
+const book = existsSync(CANDS) ? JSON.parse(readFileSync(CANDS, 'utf8')) : {};
+for (const c of candidates) {
+  book[c.eventId] = {...c, status: 'pending', foundAt: new Date().toISOString()};
+}
+writeFileSync(CANDS, JSON.stringify(book, null, 2));
 
 if (candidates.length === 0) {
   log('nenhum candidato nesta rodada.');
@@ -81,9 +85,11 @@ for (const c of candidates) {
     c.best ? `Melhor vídeo: ${c.best.url} (${c.best.views.toLocaleString('pt-BR')} views, ${c.best.duration}s)` : 'Sem vídeo no YouTube; ver alternativas do X:',
     ...c.alternatives.slice(0, 3).map((a) => `· ${a.source}: ${a.url}`),
     '',
-    `Publicar: ${cmd}`,
+    c.best ? `Responda "publica ${c.eventId}" para postar, ou "pula ${c.eventId}".` : 'Sem vídeo direto — escolher URL manualmente.',
+    '',
+    `(manual: ${cmd})`,
   ].join('\n');
   log(`candidato: #${c.eventId} — ${c.headline}`);
   await notify(msg);
 }
-log(`${candidates.length} candidato(s) — detalhes em out/clip-candidates.json`);
+log(`${candidates.length} candidato(s) pendentes no livro de candidatos`);
