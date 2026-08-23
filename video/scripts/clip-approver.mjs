@@ -45,10 +45,16 @@ async function handle(text) {
   const t = text.trim().toLowerCase();
   // "busca" dispara uma rodada do scout na hora
   if (/^(busca|procura|scout)\b/.test(t)) {
-    await notify('🔎 Caçando vídeos no topo editorial...');
+    await notify('🔎 Caçando vídeos no top-15 editorial...');
     try {
-      execFileSync('node', ['scripts/clip-scout.mjs', '--top=5'], {cwd: root, stdio: 'inherit', timeout: 15 * 60_000});
-      await notify('Rodada concluída — se nenhum candidato chegou acima, não havia vídeo óbvio no top-5 novo.');
+      const out = execFileSync('node', ['scripts/clip-scout.mjs', '--top=15'],
+        {cwd: root, encoding: 'utf8', timeout: 15 * 60_000});
+      const judged = out.split('\n').filter((l) => / #\d+:/.test(l))
+        .map((l) => l.replace(/^\[scout [^\]]+\] /, '').slice(0, 90));
+      const tally = judged.length
+        ? `Julgados:\n${judged.map((j) => `· ${j}`).join('\n')}`
+        : 'Nenhum evento novo desde a última rodada — o top-15 inteiro já foi avaliado.';
+      await notify(tally);
     } catch (err) {
       await notify(`❌ scout falhou: ${String(err.message).slice(0, 150)}`);
     }
