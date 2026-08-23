@@ -23,6 +23,7 @@ const headline = flag('headline', null);
 const credit = flag('credit', '');
 const maxSeconds = Number(flag('max', '90'));
 const position = flag('pos', 'bottom'); // bottom (padrão) | top
+const captionOverride = flag('caption', '');
 if (!url || !headline) {
   console.error('Uso: node scripts/tweet-clip.mjs --url=<video> --headline="..." [--credit=@fonte]');
   process.exit(1);

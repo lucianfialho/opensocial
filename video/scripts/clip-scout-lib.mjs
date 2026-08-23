@@ -19,8 +19,14 @@ export async function judgeEvent(event, summary) {
       messages: [
         {
           role: 'system',
-          content: `Você avalia se uma notícia tem um VÍDEO ÓBVIO circulando (demonstração, flagrante, corrida de robô, lançamento com footage). Balanço financeiro, nomeação de executivo, acordo: não tem. Responda SÓ JSON:
-{"temVideo": true/false, "query": "busca em inglês curta pra achar o vídeo", "headline": "manchete pt-BR estilo manchete de reel, máx 12 palavras"}`,
+          content: `Você avalia se uma notícia tem um VÍDEO ÓBVIO circulando (demonstração, flagrante, corrida de robô, lançamento com footage). Balanço financeiro, nomeação de executivo, acordo: não tem.
+
+MANCHETE (se tiver vídeo) — regras duras: afirmação direta no presente com o fato mais forte, número sempre que houver, máx 10 palavras, nunca "Vídeo mostra/debate". RUIM: "Robô humanoide supera recorde" | BOM: "Um robô acabou de correr mais rápido que Usain Bolt".
+
+CAPTION: 2-3 frases pt-BR, gancho + contexto, sem hashtag.
+
+Responda SÓ JSON:
+{"temVideo": true/false, "query": "busca em inglês curta pra achar o vídeo", "headline": "...", "caption": "..."}`,
         },
         {role: 'user', content: JSON.stringify({titulo: event.title, resumo: summary})},
       ],
@@ -139,8 +145,18 @@ export async function judgeRadarFind(title, url) {
       model: envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash',
       max_tokens: 1024,
       messages: [
-        {role: 'system', content: `Você faz triagem de vídeos virais para o @oagentico (notícias de IA/tech, Brasil). Aprova só o que é: sobre IA/robótica/tech, visualmente interessante, e crível (nada com cara de fake/fora de contexto/cringe de marketing). Responda SÓ JSON:
-{"vale": true/false, "headline": "manchete pt-BR máx 12 palavras", "motivo": "1 frase"}`},
+        {role: 'system', content: `Você faz triagem de vídeos virais para o @oagentico (notícias de IA/tech, Brasil). Aprova só o que é: sobre IA/robótica/tech, visualmente interessante, e crível (nada com cara de fake/fora de contexto/cringe de marketing).
+
+MANCHETE — regras duras:
+- Nunca descreva o vídeo ("Vídeo mostra...", "Vídeo debate..." = PROIBIDO)
+- Afirmação direta no presente, com o fato mais forte; número sempre que houver
+- Máx 10 palavras. Tensão ou surpresa > neutralidade
+- RUIM: "Vídeo debate robôs humanoides domésticos" | BOM: "O robô doméstico chinês já cozinha melhor que você"
+
+CAPTION do post: 2-3 frases pt-BR — gancho forte na primeira, contexto do que se vê, sem hashtag (o sistema adiciona).
+
+Responda SÓ JSON:
+{"vale": true/false, "headline": "...", "caption": "...", "motivo": "1 frase"}`},
         {role: 'user', content: JSON.stringify({titulo: title, url})},
       ],
     }),

@@ -60,6 +60,7 @@ for (const event of dados.slice(0, top)) {
     eventId: event.id,
     title: event.title,
     headline: verdict.headline,
+    caption: verdict.caption,
     best,
     alternatives: [...yt.slice(0, 3), ...x.slice(0, 2)],
   });
@@ -90,6 +91,7 @@ for (const find of await searchRadarX()) {
     radar: true,
     title: find.title.slice(0, 90),
     headline: screen.headline,
+    caption: screen.caption,
     best: {...find, views: 0, duration: 0},
     alternatives: [],
   });

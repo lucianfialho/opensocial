@@ -27,10 +27,12 @@ const readJson = (p, fallback) => (existsSync(p) ? JSON.parse(readFileSync(p, 'u
 function publish(cand) {
   const {best, headline, eventId} = cand;
   const creditGuess = (best.title ?? '').split(/[|\-–]/)[0].trim().slice(0, 40) || 'fonte';
-  execFileSync('node', [
+  const args = [
     'scripts/tweet-clip.mjs', `--url=${best.url}`, `--headline=${headline}`,
     `--credit=${creditGuess}`, '--max=60',
-  ], {cwd: root, stdio: 'inherit', env: process.env, timeout: 30 * 60_000});
+  ];
+  if (cand.caption) args.push(`--caption=${cand.caption}`);
+  execFileSync('node', args, {cwd: root, stdio: 'inherit', env: process.env, timeout: 30 * 60_000});
   const slug = createHash('md5').update(best.url).digest('hex').slice(0, 8);
   const caption = readFileSync(join(root, 'out', `tweetclip-${slug}.caption.txt`), 'utf8');
   const out = execFileSync('node', [
