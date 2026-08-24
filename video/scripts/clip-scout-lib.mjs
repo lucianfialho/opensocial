@@ -119,18 +119,28 @@ export async function notify(text) {
 export async function searchRadarX() {
   const key = envValue('TAVILY_API_KEY');
   if (!key) return [];
-  const queries = [
+  // pool rotativo: 3 buscas por rodada, escolhidas pela hora — rodadas
+  // seguidas no mesmo dia vasculham territórios diferentes
+  const POOL = [
     'viral AI video demo',
     'humanoid robot video incredible',
     'new AI tool demo video',
+    'robot fails video funny',
+    'AI generated video insane',
+    'boston dynamics unitree robot video',
+    'self driving car video viral',
+    'AI agent demo video wild',
+    'tech demo video mind blowing',
   ];
+  const start = new Date().getHours() % POOL.length;
+  const queries = [0, 1, 2].map((i) => POOL[(start + i * 3) % POOL.length]);
   const found = new Map();
   for (const q of queries) {
     try {
       const res = await fetch('https://api.tavily.com/search', {
         method: 'POST',
         headers: {'content-type': 'application/json', authorization: `Bearer ${key}`},
-        body: JSON.stringify({query: q, include_domains: ['x.com'], max_results: 5, days: 1, topic: 'news'}),
+        body: JSON.stringify({query: q, include_domains: ['x.com'], max_results: 8, days: 1, topic: 'news'}),
       });
       if (!res.ok) continue;
       for (const r of (await res.json()).results ?? []) {

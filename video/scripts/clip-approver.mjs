@@ -51,7 +51,7 @@ async function handle(text) {
     try {
       const out = execFileSync('node', ['scripts/clip-scout.mjs', '--top=15'],
         {cwd: root, encoding: 'utf8', timeout: 15 * 60_000});
-      const judged = out.split('\n').filter((l) => / #\d+:/.test(l))
+      const judged = out.split('\n').filter((l) => / #\d+:|radar:/.test(l))
         .map((l) => l.replace(/^\[scout [^\]]+\] /, '').slice(0, 90));
       const tally = judged.length
         ? `Julgados:\n${judged.map((j) => `· ${j}`).join('\n')}`

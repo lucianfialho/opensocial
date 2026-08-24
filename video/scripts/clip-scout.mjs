@@ -69,7 +69,10 @@ for (const event of dados.slice(0, top)) {
 // ---- RADAR: vídeos bombando no X, independente da cobertura do site ----
 // verificação editorial aqui é HUMANA — os candidatos chegam marcados 🌐
 let radarCount = 0;
-for (const find of await searchRadarX()) {
+const finds = await searchRadarX();
+const novos = finds.filter((f) => !seen[f.url]).length;
+log(`radar: ${finds.length} achados, ${novos} novos`);
+for (const find of finds) {
   if (radarCount >= 2) break; // máx 2 por rodada, sem spam
   if (seen[find.url]) continue;
   seen[find.url] = new Date().toISOString();
