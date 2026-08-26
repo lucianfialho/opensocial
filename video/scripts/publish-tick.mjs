@@ -122,7 +122,14 @@ for (const event of dados.slice(0, TOP_N)) {
     heat = await judgeHeat(event, detail.dados?.summary ?? '');
   } catch (err) {
     log(`#${event.id}: juiz de calor falhou (${err.message}) — nada entra na fila até o gateway voltar.`);
-    await notify(`⚠️ tick: juiz de calor falhou (${err.message}). Eventos novos ficam fora da fila até o gateway voltar.`);
+    // an outage lasts hours and the tick fires every 30min — alert at most
+    // once every 6h, not once per tick
+    const lastAlert = state.lastGatewayAlertAt ? new Date(state.lastGatewayAlertAt).getTime() : 0;
+    if (Date.now() - lastAlert > 6 * 3600_000) {
+      await notify(`⚠️ tick: juiz de calor falhou (${err.message}). Eventos novos ficam fora da fila até o gateway voltar.`);
+      state.lastGatewayAlertAt = new Date().toISOString();
+      save();
+    }
     break;
   }
   state.seen[event.id] = new Date().toISOString();
