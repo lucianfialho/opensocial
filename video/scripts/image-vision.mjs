@@ -56,7 +56,7 @@ export async function describeImages(images, apiKey) {
         quem: d.quem ?? null,
       });
     } catch (err) {
-      console.error(`vision: imagem ${index} ilegível (${err.message}) — tratada como pessoa não identificada`);
+      console.error(`vision: imagem ${index} ilegível (${err.message}) — tratada como arriscada (não será usada)`);
       out.push({index, descricao: '(ilegível)', pessoa_identificavel: true, quem: null});
     }
   }
