@@ -6,6 +6,7 @@ import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
+import {checkCopy} from './copy-check.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
@@ -78,6 +79,8 @@ export async function writeCarouselScript(story, detail, images = []) {
     if (!script.cover?.headline || !Array.isArray(script.cards) || script.cards.length === 0) {
       throw new Error('script incompleto');
     }
+    const gate = checkCopy({headline: script.cover.headline, caption: script.caption});
+    if (!gate.ok) throw new Error(`trava de qualidade: ${gate.motivo}`);
     writeFileSync(cachePath, JSON.stringify(script, null, 2));
     console.log(`writer: roteiro de ${script.cards.length + 2} cards (${MODEL})`);
     return script;

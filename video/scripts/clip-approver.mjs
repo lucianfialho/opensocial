@@ -10,6 +10,7 @@ import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {notify} from './clip-scout-lib.mjs';
+import {checkCopy} from './copy-check.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CANDS = join(homedir(), '.config', 'opensocial', 'clip-candidates.json');
@@ -75,6 +76,10 @@ async function handle(text) {
     return notify(`Ok, #${id} pulado.`);
   }
   if (!cand.best) return notify(`#${id} não tem vídeo direto — publica manualmente.`);
+  const gate = checkCopy({headline: cand.headline, caption: cand.caption});
+  if (!gate.ok) {
+    return notify(`🚫 #${id} barrado na trava de qualidade: ${gate.motivo}. Corrija o candidato antes de publicar.`);
+  }
   await notify(`Renderizando e publicando #${id}... (alguns minutos)`);
   try {
     const url = publish(cand);

@@ -10,6 +10,7 @@ import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {judgeEvent, searchYouTube, searchTavily, searchRadarX, judgeRadarFind, canDownload, notify} from './clip-scout-lib.mjs';
+import {checkCopy} from './copy-check.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API = 'https://oagentico.com.br/api/v1';
@@ -40,6 +41,11 @@ for (const event of dados.slice(0, top)) {
   seen[event.id] = new Date().toISOString();
   if (!verdict.temVideo) {
     log(`#${event.id}: sem vídeo óbvio — "${event.title.slice(0, 50)}"`);
+    continue;
+  }
+  const gateEv = checkCopy({headline: verdict.headline, caption: verdict.caption});
+  if (!gateEv.ok) {
+    log(`#${event.id}: trava de qualidade (${gateEv.motivo}) — pulando`);
     continue;
   }
   log(`#${event.id}: TEM VÍDEO → buscando "${verdict.query}"`);
@@ -82,6 +88,11 @@ for (const find of finds) {
   } catch { continue; }
   if (!screen.vale) {
     log(`radar: reprovado (${screen.motivo ?? 's/ motivo'}) — ${find.title.slice(0, 50)}`);
+    continue;
+  }
+  const gate = checkCopy({headline: screen.headline, caption: screen.caption});
+  if (!gate.ok) {
+    log(`radar: trava de qualidade (${gate.motivo}) — ${find.title.slice(0, 40)}`);
     continue;
   }
   if (!canDownload(find.url)) {
