@@ -9,6 +9,8 @@ import {homedir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
+import {judgeHeat} from './heat-judge.mjs';
+import {notify} from './clip-scout-lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cli = join(root, '..', 'cli', 'dist', 'index.js');
@@ -27,6 +29,10 @@ const MIN_GAP_MINUTES = Number(envValue('OPENSOCIAL_MIN_GAP_MINUTES') ?? 50);
 // ranking get queued. The data said it loud: one hot story out-reached 90
 // lukewarm ones — publish the top of the news cycle, not all of it.
 const TOP_N = Number(envValue('OPENSOCIAL_TOP_N') ?? 20);
+// Heat bar: an event only earns a queue slot when the LLM judge scores it
+// at or above this. The autopsy's rule — fewer posts, only the hot ones —
+// means a weak news day publishes less than the cap, by design.
+const HEAT_MIN = Number(envValue('OPENSOCIAL_HEAT_MIN') ?? 6);
 // Machine slice: which content types THIS machine ingests and publishes.
 // Set OPENSOCIAL_TICK_TYPES=reel (desktop) or =carousel (VPS) in the unit
 // or packages/video/.env; unset = both (single-machine mode).
@@ -104,6 +110,26 @@ const {dados} = await res.json();
 const fresh = [];
 for (const event of dados.slice(0, TOP_N)) {
   if (state.seen[event.id]) continue;
+  // heat gate: cold stories never enter the queue. Judge failure (gateway
+  // down) leaves the event UNSEEN so the next tick retries — fail closed:
+  // publishing nothing beats publishing cold, and cold posts train the
+  // algorithm against the account.
+  let heat;
+  try {
+    const detail = await (
+      await fetch(`${API}/eventos/${event.id}`, {headers: {Authorization: `Bearer ${token}`}})
+    ).json();
+    heat = await judgeHeat(event, detail.dados?.summary ?? '');
+  } catch (err) {
+    log(`#${event.id}: juiz de calor falhou (${err.message}) — nada entra na fila até o gateway voltar.`);
+    await notify(`⚠️ tick: juiz de calor falhou (${err.message}). Eventos novos ficam fora da fila até o gateway voltar.`);
+    break;
+  }
+  state.seen[event.id] = new Date().toISOString();
+  if (heat.nota < HEAT_MIN) {
+    log(`evento #${event.id} frio (${heat.nota}/10: ${heat.motivo}) — fora da fila`);
+    continue;
+  }
   // one piece per type per event: a reel and ONE carousel — the LLM-scripted
   // resumo already tells the whole story, and a second claims carousel of
   // the same event reads as a duplicate post in the feed
@@ -113,8 +139,7 @@ for (const event of dados.slice(0, TOP_N)) {
     {type: 'carousel', mode: 'resumo', id: event.id, title: event.title, queuedAt},
   ];
   fresh.push(...pieces.filter((p) => TICK_TYPES.has(p.type)));
-  state.seen[event.id] = new Date().toISOString();
-  log(`evento novo #${event.id} → fila (ordem editorial da API)`);
+  log(`evento novo #${event.id} quente (${heat.nota}/10) → fila`);
 }
 // fresh batch jumps the line, keeping the API's order within the batch:
 // news value decays fast and the backlog can wait — but "newest" now means

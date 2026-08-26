@@ -27,7 +27,7 @@ const readJson = (p, fallback) => (existsSync(p) ? JSON.parse(readFileSync(p, 'u
 
 function publish(cand) {
   const {best, headline, eventId} = cand;
-  const creditGuess = (best.title ?? '').split(/[|\-–]/)[0].trim().slice(0, 40) || 'fonte';
+  const creditGuess = cand.credit ?? ((best.title ?? '').split(/[|\-–]/)[0].trim().slice(0, 40) || 'fonte');
   const args = [
     'scripts/tweet-clip.mjs', `--url=${best.url}`, `--headline=${headline}`,
     `--credit=${creditGuess}`, '--max=60',

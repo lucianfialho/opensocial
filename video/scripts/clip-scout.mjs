@@ -9,7 +9,7 @@ import {homedir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
-import {judgeEvent, searchYouTube, searchTavily, searchRadarX, judgeRadarFind, canDownload, notify} from './clip-scout-lib.mjs';
+import {judgeEvent, searchYouTube, searchTavily, searchRadarX, searchNasaVideos, judgeRadarFind, canDownload, notify} from './clip-scout-lib.mjs';
 import {checkCopy} from './copy-check.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,6 +111,46 @@ for (const find of finds) {
   });
   radarCount += 1;
   log(`radar: CANDIDATO #${radarId} — ${screen.headline}`);
+}
+
+// ---- NASA: vídeos recentes de domínio público — replicação 100% segura ----
+let nasaCount = 0;
+const nasaFinds = await searchNasaVideos();
+log(`nasa: ${nasaFinds.length} vídeo(s) recente(s)`);
+for (const find of nasaFinds) {
+  if (nasaCount >= 1) break; // 1 por rodada — é tempero, não prato principal
+  if (seen[find.url]) continue;
+  seen[find.url] = new Date().toISOString();
+  let screen;
+  try {
+    screen = await judgeRadarFind(find.title, find.url);
+  } catch { continue; }
+  if (!screen.vale) {
+    log(`nasa: reprovado (${screen.motivo ?? 's/ motivo'}) — ${find.title.slice(0, 50)}`);
+    continue;
+  }
+  const gate = checkCopy({headline: screen.headline, caption: screen.caption});
+  if (!gate.ok) {
+    log(`nasa: trava de qualidade (${gate.motivo}) — ${find.title.slice(0, 40)}`);
+    continue;
+  }
+  if (!canDownload(find.url)) {
+    log(`nasa: não baixa daqui — ${find.url.slice(0, 60)}`);
+    continue;
+  }
+  const nasaId = 90000 + (Object.keys(seen).length % 9000);
+  candidates.push({
+    eventId: nasaId,
+    radar: true,
+    credit: 'NASA',
+    title: find.title.slice(0, 90),
+    headline: screen.headline,
+    caption: screen.caption,
+    best: {...find, views: 0, duration: 0},
+    alternatives: [],
+  });
+  nasaCount += 1;
+  log(`nasa: CANDIDATO #${nasaId} — ${screen.headline}`);
 }
 
 writeFileSync(STATE, JSON.stringify(seen, null, 2));

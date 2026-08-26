@@ -131,6 +131,10 @@ export async function searchRadarX() {
     'self driving car video viral',
     'AI agent demo video wild',
     'tech demo video mind blowing',
+    'NASA SpaceX rocket launch video',
+    'Optimus Figure humanoid robot demo video',
+    'drone swarm footage viral',
+    'lab experiment video amazing science',
   ];
   const start = new Date().getHours() % POOL.length;
   const queries = [0, 1, 2].map((i) => POOL[(start + i * 3) % POOL.length]);
@@ -149,6 +153,48 @@ export async function searchRadarX() {
     } catch {}
   }
   return [...found.values()];
+}
+
+/** NASA image & video library: recent public-domain videos with DIRECT mp4
+ *  URLs — no bot-check, downloads fine from datacenter IPs (unlike YouTube),
+ *  and replication is 100% safe (US public domain). Rotates a topic per hour. */
+export async function searchNasaVideos() {
+  const TOPICS = ['robot', 'artemis', 'rocket launch', 'rover', 'space station', 'earth observation'];
+  const q = TOPICS[new Date().getHours() % TOPICS.length];
+  try {
+    const year = new Date().getFullYear();
+    const res = await fetch(
+      `https://images-api.nasa.gov/search?media_type=video&year_start=${year}&q=${encodeURIComponent(q)}`,
+      {signal: AbortSignal.timeout(20_000)},
+    );
+    if (!res.ok) return [];
+    const items = (await res.json()).collection?.items ?? [];
+    // only what NASA published in the last ~3 weeks — the format needs "now"
+    const cutoff = Date.now() - 21 * 86400_000;
+    const recent = items
+      .filter((i) => new Date(i.data?.[0]?.date_created ?? 0).getTime() > cutoff)
+      .slice(0, 3);
+    const out = [];
+    for (const item of recent) {
+      try {
+        const files = await (await fetch(item.href, {signal: AbortSignal.timeout(20_000)})).json();
+        const mp4s = files.filter((f) => /\.mp4$/i.test(f)).map((f) => f.replace(/^http:/, 'https:'));
+        // ~mobile/~medium keeps downloads sane; ~orig can be gigabytes
+        const url = mp4s.find((f) => /~medium\.mp4$/i.test(f))
+          ?? mp4s.find((f) => /~mobile\.mp4$/i.test(f))
+          ?? mp4s[0];
+        if (!url) continue;
+        out.push({
+          url: encodeURI(url),
+          title: item.data?.[0]?.title ?? 'NASA video',
+          source: 'NASA',
+        });
+      } catch {}
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 /** LLM screen for a radar find: on-topic, credible, headline-worthy? */
