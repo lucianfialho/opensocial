@@ -4,7 +4,7 @@
 import {envValue} from './tts.mjs';
 import {chatCompletion, parseJsonBlock} from './llm.mjs';
 
-const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash';
+const MODEL = envValue('OPENSOCIAL_JUDGE_MODEL') ?? 'deepseek/deepseek-v4-flash';
 
 const PROMPT = `Você é o editor-chefe do @oagentico (Instagram de notícias de IA/tech, Brasil). A conta publica NO MÁXIMO 4 posts/dia — cada vaga é disputada. Dê uma nota de calor 0-10 pra notícia.
 

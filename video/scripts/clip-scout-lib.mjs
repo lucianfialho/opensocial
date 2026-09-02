@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {envValue} from './tts.mjs';
 import {chatCompletion, parseJsonBlock} from './llm.mjs';
 
-const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash';
+const MODEL = envValue('OPENSOCIAL_JUDGE_MODEL') ?? 'deepseek/deepseek-v4-flash';
 
 /** LLM: does this event have an obvious video? Returns judgment + query + headline. */
 export async function judgeEvent(event, summary) {
@@ -191,7 +191,7 @@ export async function searchNasaVideos() {
 /** LLM screen for a radar find: on-topic, credible, headline-worthy? */
 export async function judgeRadarFind(title, url) {
   const text = await chatCompletion({
-    model: envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash',
+    model: envValue('OPENSOCIAL_JUDGE_MODEL') ?? 'deepseek/deepseek-v4-flash',
     max_tokens: 1024,
     messages: [
         {role: 'system', content: `Você faz triagem de vídeos virais para o @oagentico (notícias de IA/tech, Brasil). Aprova só o que é: sobre IA/robótica/tech, visualmente interessante, e crível (nada com cara de fake/fora de contexto/cringe de marketing).
