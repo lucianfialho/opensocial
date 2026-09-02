@@ -2,6 +2,7 @@
 // the reach autopsies converged on — human stakes + heat of the moment.
 // With a 4/day cap, a slot in the queue is earned, not granted.
 import {envValue} from './tts.mjs';
+import {chatCompletion, parseJsonBlock} from './llm.mjs';
 
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash';
 
@@ -23,32 +24,22 @@ Responda SÓ JSON:
 {"nota": 0-10, "motivo": "1 frase direta"}`;
 
 export async function judgeHeat(event, summary) {
-  const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${envValue('AI_GATEWAY_API_KEY')}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 1024,
-      messages: [
-        {role: 'system', content: PROMPT},
-        {
-          role: 'user',
-          content: JSON.stringify({
-            titulo: event.title,
-            resumo: summary,
-            veiculosIndependentes: event.independentSources,
-          }),
-        },
-      ],
-    }),
+  const text = await chatCompletion({
+    model: MODEL,
+    max_tokens: 1024,
+    messages: [
+      {role: 'system', content: PROMPT},
+      {
+        role: 'user',
+        content: JSON.stringify({
+          titulo: event.title,
+          resumo: summary,
+          veiculosIndependentes: event.independentSources,
+        }),
+      },
+    ],
   });
-  if (!res.ok) throw new Error(`gateway ${res.status}`);
-  const data = await res.json();
-  const text = (data.choices?.[0]?.message?.content ?? '').replace(/```(?:json)?/g, '');
-  const out = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  const out = parseJsonBlock(text);
   if (typeof out.nota !== 'number') throw new Error('resposta sem nota');
   return out;
 }

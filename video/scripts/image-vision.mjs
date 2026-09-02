@@ -5,6 +5,7 @@
 // as "identifiable person, unknown" so it never gets paired.
 import sharp from 'sharp';
 import {envValue} from './tts.mjs';
+import {chatCompletion, parseJsonBlock} from './llm.mjs';
 
 const VISION_MODEL = () => envValue('OPENSOCIAL_VISION_MODEL') ?? 'google/gemini-2.5-flash-lite';
 
@@ -20,27 +21,20 @@ async function describeOne(url, apiKey) {
     .resize(512, 512, {fit: 'inside', withoutEnlargement: true})
     .jpeg({quality: 80})
     .toBuffer();
-  const api = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
-    method: 'POST',
-    headers: {authorization: `Bearer ${apiKey}`, 'content-type': 'application/json'},
-    body: JSON.stringify({
-      model: VISION_MODEL(),
-      max_tokens: 400,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {type: 'text', text: PROMPT},
-            {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${small.toString('base64')}`}},
-          ],
-        },
-      ],
-    }),
-  });
-  if (!api.ok) throw new Error(`gateway ${api.status}`);
-  const data = await api.json();
-  const text = (data.choices?.[0]?.message?.content ?? '').replace(/```(?:json)?/g, '');
-  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  const text = await chatCompletion({
+    model: VISION_MODEL(),
+    max_tokens: 400,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {type: 'text', text: PROMPT},
+          {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${small.toString('base64')}`}},
+        ],
+      },
+    ],
+  }, apiKey);
+  return parseJsonBlock(text);
 }
 
 /** Returns [{index, descricao, pessoa_identificavel, quem}] for up to 6 images. */

@@ -7,6 +7,7 @@ import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {checkCopy} from './copy-check.mjs';
+import {chatCompletion, llmKey, parseJsonBlock} from './llm.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
@@ -35,7 +36,7 @@ export async function writeCarouselScript(story, detail, images = []) {
   // a ready script needs no API key — cache first
   if (existsSync(cachePath)) return JSON.parse(readFileSync(cachePath, 'utf8'));
 
-  const apiKey = envValue('AI_GATEWAY_API_KEY');
+  const apiKey = llmKey();
   if (!apiKey) return null;
 
   let imagens = [];
@@ -52,30 +53,16 @@ export async function writeCarouselScript(story, detail, images = []) {
     imagens,
   };
   for (let attempt = 1; attempt <= 2; attempt++) {
-  const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
+  try {
+    const text = await chatCompletion({
       model: MODEL,
       max_tokens: 8192,
       messages: [
         {role: 'system', content: PROMPT},
         {role: 'user', content: JSON.stringify(synthesis)},
       ],
-    }),
-  });
-  if (!res.ok) {
-    console.error(`writer: AI Gateway ${res.status} (tentativa ${attempt})`);
-    continue;
-  }
-  const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content ?? '';
-  const text = raw.replace(/```(?:json)?/g, '');
-  try {
-    const script = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    }, apiKey);
+    const script = parseJsonBlock(text);
     if (!script.cover?.headline || !Array.isArray(script.cards) || script.cards.length === 0) {
       throw new Error('script incompleto');
     }

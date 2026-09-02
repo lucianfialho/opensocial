@@ -2,21 +2,16 @@
 // Telegram notification. All keys come from packages/video/.env.
 import {execFileSync} from 'node:child_process';
 import {envValue} from './tts.mjs';
+import {chatCompletion, parseJsonBlock} from './llm.mjs';
 
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash';
 
 /** LLM: does this event have an obvious video? Returns judgment + query + headline. */
 export async function judgeEvent(event, summary) {
-  const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${envValue('AI_GATEWAY_API_KEY')}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 2048,
-      messages: [
+  const text = await chatCompletion({
+    model: MODEL,
+    max_tokens: 2048,
+    messages: [
         {
           role: 'system',
           content: `Você avalia se uma notícia tem um VÍDEO ÓBVIO circulando (demonstração, flagrante, corrida de robô, lançamento com footage). Balanço financeiro, nomeação de executivo, acordo: não tem.
@@ -29,13 +24,9 @@ Responda SÓ JSON:
 {"temVideo": true/false, "query": "busca em inglês curta pra achar o vídeo", "headline": "...", "caption": "..."}`,
         },
         {role: 'user', content: JSON.stringify({titulo: event.title, resumo: summary})},
-      ],
-    }),
+    ],
   });
-  if (!res.ok) throw new Error(`gateway ${res.status}`);
-  const data = await res.json();
-  const text = (data.choices?.[0]?.message?.content ?? '').replace(/```(?:json)?/g, '');
-  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  return parseJsonBlock(text);
 }
 
 /** yt-dlp native YouTube search — results are downloadable by construction. */
@@ -199,13 +190,10 @@ export async function searchNasaVideos() {
 
 /** LLM screen for a radar find: on-topic, credible, headline-worthy? */
 export async function judgeRadarFind(title, url) {
-  const res = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
-    method: 'POST',
-    headers: {authorization: `Bearer ${envValue('AI_GATEWAY_API_KEY')}`, 'content-type': 'application/json'},
-    body: JSON.stringify({
-      model: envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash',
-      max_tokens: 1024,
-      messages: [
+  const text = await chatCompletion({
+    model: envValue('OPENSOCIAL_WRITER_MODEL') ?? 'deepseek/deepseek-v4-flash',
+    max_tokens: 1024,
+    messages: [
         {role: 'system', content: `Você faz triagem de vídeos virais para o @oagentico (notícias de IA/tech, Brasil). Aprova só o que é: sobre IA/robótica/tech, visualmente interessante, e crível (nada com cara de fake/fora de contexto/cringe de marketing).
 
 MANCHETE — regras duras:
@@ -219,11 +207,7 @@ CAPTION do post: 2-3 frases pt-BR — gancho forte na primeira, contexto do que 
 Responda SÓ JSON:
 {"vale": true/false, "headline": "...", "caption": "...", "motivo": "1 frase"}`},
         {role: 'user', content: JSON.stringify({titulo: title, url})},
-      ],
-    }),
+    ],
   });
-  if (!res.ok) throw new Error(`gateway ${res.status}`);
-  const data = await res.json();
-  const text = (data.choices?.[0]?.message?.content ?? '').replace(/```(?:json)?/g, '');
-  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  return parseJsonBlock(text);
 }
