@@ -12,11 +12,17 @@ import {chatCompletion, llmKey, parseJsonBlock} from './llm.mjs';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
 
-const PROMPT = `Você é o editor de social do "o agêntico", veículo brasileiro de notícias de IA e tech. Converta a síntese de uma notícia em um roteiro de carrossel de Instagram no estilo revista (capa forte, storytelling no miolo, punchline).
+const PROMPT = `Você é o editor de social do "o agêntico", veículo brasileiro de notícias de IA e tech. Converta a síntese de uma notícia em um roteiro de carrossel de Instagram no estilo revista. O carrossel é uma HISTÓRIA que o leitor desliza — não uma lista de fatos.
 
-Regras:
-- 4 a 6 cards no miolo (além de capa e CTA, que são automáticos)
-- Capa: reescreva o título como gancho curto (pergunta ou afirmação de impacto, máx 9 palavras) + um subtítulo de 1 frase
+AS 4 LEIS DO ROTEIRO:
+1. ARCO (estrutura PAS): a capa abre com TENSÃO — o fato mais surpreendente, o número que choca ou a pergunta que incomoda. NUNCA o título da notícia reescrito. Os cards seguintes agitam (por que isso mexe com a vida de quem lê), desenvolvem (o que aconteceu de fato) e fecham com punchline (a consequência ou a pergunta que fica). Antes de escrever, identifique: qual é O fato da história? Ele lidera a capa.
+2. NADA DE LINGUIÇA: cada card acrescenta informação NOVA. Proibido repetir o fato da capa ou de outro card com outras palavras. Se a síntese sustenta só 3 cards fortes, escreva 3 — card fraco mata a retenção do carrossel inteiro.
+3. HISTÓRIA: conecte os fatos em narrativa — causa, consequência, o que muda pra quem lê. Fato solto sem contexto ("Fulano e os 2.275%") é proibido: todo número vem amarrado ao que ele significa.
+4. EMOÇÃO: escolha a emoção dominante da notícia (surpresa, indignação, esperança, humor, alívio) e escreva o roteiro INTEIRO nela. Texto morno de assessoria é proibido — clichês banidos: "o futuro está em jogo", "legado inegável", "momento crucial", "marco histórico", "divisor de águas".
+
+FORMATO:
+- 3 a 6 cards no miolo (além de capa e CTA, que são automáticos)
+- Capa: gancho de impacto (máx 9 palavras) + subtítulo de 1 frase
 - Todo texto em pt-BR, frases curtas, ritmo de fala; zero jargão corporativo
 - Em cada card, "accent" é um trecho EXATO (copiado letra a letra) do headline daquele card, com NO MÁXIMO 4 palavras — nunca o headline inteiro
 - Estilos de card do miolo: "photo" (frase forte, vai sobre foto), "essay" (headline + 2-3 parágrafos curtos + closer em negrito), "cream" (respiro: parágrafo de contexto + afirmação forte)
@@ -65,6 +71,17 @@ export async function writeCarouselScript(story, detail, images = []) {
     const script = parseJsonBlock(text);
     if (!script.cover?.headline || !Array.isArray(script.cards) || script.cards.length === 0) {
       throw new Error('script incompleto');
+    }
+    for (const [i, card] of script.cards.entries()) {
+      if (typeof card.headline !== 'string' || !card.headline.trim()) {
+        throw new Error(`card ${i} sem headline`);
+      }
+      if (card.accent && !card.headline.includes(card.accent)) {
+        throw new Error(`card ${i}: accent não é trecho do headline`);
+      }
+    }
+    if (script.cover.accent && !script.cover.headline.includes(script.cover.accent)) {
+      throw new Error('capa: accent não é trecho do headline');
     }
     const gate = checkCopy({headline: script.cover.headline, caption: script.caption});
     if (!gate.ok) throw new Error(`trava de qualidade: ${gate.motivo}`);
