@@ -26,36 +26,10 @@ async function toDataUri(url) {
   if (imageCache.has(url)) return imageCache.get(url);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`imagem ${res.status}: ${url}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  const meta = await sharp(buf).metadata();
-  const ratio = (meta.width ?? 1) / (meta.height ?? 1);
-  let jpeg;
-  if (ratio >= 1.2) {
-    // landscape source on the 1080×1350 portrait canvas: a blind cover-crop
-    // beheads wordmarks and screenshots — compose contain-over-blurred-fill
-    const fg = await sharp(buf).resize(1080, 1350, {fit: 'inside'}).toBuffer();
-    const fgMeta = await sharp(fg).metadata();
-    const bg = await sharp(buf)
-      .resize(1080, 1350, {fit: 'cover'})
-      .blur(45)
-      .modulate({brightness: 0.55})
-      .toBuffer();
-    jpeg = await sharp(bg)
-      .composite([{
-        input: fg,
-        // sit the whole image a touch above center — the bottom third
-        // belongs to the scrim and the headline
-        top: Math.round((1350 - (fgMeta.height ?? 0)) * 0.42),
-        left: Math.round((1080 - (fgMeta.width ?? 0)) / 2),
-      }])
-      .jpeg({quality: 88})
-      .toBuffer();
-  } else {
-    jpeg = await sharp(buf)
-      .resize(1080, 1350, {fit: 'outside', withoutEnlargement: true})
-      .jpeg({quality: 88})
-      .toBuffer();
-  }
+  const jpeg = await sharp(Buffer.from(await res.arrayBuffer()))
+    .resize(1080, 1350, {fit: 'outside', withoutEnlargement: true})
+    .jpeg({quality: 88})
+    .toBuffer();
   const uri = `data:image/jpeg;base64,${jpeg.toString('base64')}`;
   imageCache.set(url, uri);
   return uri;
