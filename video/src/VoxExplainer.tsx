@@ -30,6 +30,7 @@ export const voxExplainerSchema = z.object({
       big: z.string().nullable().default(null),
       circle: z.string().nullable().default(null),
       arrow: z.boolean().default(false),
+      entity: z.object({nome: z.string(), logo: z.string().nullable()}).nullable().default(null),
       image: z.string().nullable().default(null),
       credit: z.string().nullable().default(null),
     }),
@@ -151,6 +152,30 @@ const Burst: React.FC<{startSec: number; seed: number}> = ({startSec, seed}) => 
   );
 };
 
+/** Entity sticker: pill with logo + name, slaps in with a spring. */
+const EntitySticker: React.FC<{entity: {nome: string; logo: string | null}; startSec: number}> = ({entity, startSec}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const enter = spring({frame: frame - (startSec + 0.35) * fps, fps, config: {damping: 11, stiffness: 190}});
+  if (frame < (startSec + 0.35) * fps) return null;
+  return (
+    <div
+      style={{
+        position: 'absolute', top: 250, left: 84,
+        display: 'flex', alignItems: 'center', gap: 18,
+        background: 'white', borderRadius: 60, padding: '16px 34px 16px 20px',
+        boxShadow: '0 14px 34px rgba(20,20,18,0.22)',
+        transform: `scale(${0.4 + enter * 0.6}) rotate(${-10 + enter * 6}deg)`,
+        transformOrigin: 'left center',
+        opacity: Math.min(1, enter * 1.4),
+      }}
+    >
+      {entity.logo ? <Img src={staticFile(entity.logo)} style={{width: 58, height: 58, objectFit: 'contain'}} /> : null}
+      <div style={{fontSize: 34, fontWeight: 800, letterSpacing: 5, color: INK}}>{entity.nome.toUpperCase()}</div>
+    </div>
+  );
+};
+
 const Masthead: React.FC<{brand: string}> = ({brand}) => (
   <div style={{position: 'absolute', top: 84, left: 0, right: 0, display: 'flex', justifyContent: 'center', fontFamily: 'Gofar Serif', fontSize: 64, color: INK}}>
     {brand.replace(/\s+/g, '')}
@@ -249,6 +274,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
 
       {active?.image ? <PhotoMoment seg={active} /> : null}
       {active?.image && active.arrow ? <ScribbleArrow startSec={active.startSec} seed={41} /> : null}
+      {active?.entity && !active.image && !endCard ? <EntitySticker entity={active.entity} startSec={active.startSec} /> : null}
 
       {/* kinetic type zone: lower half when a photo is up, centered otherwise */}
       {active && !endCard ? (

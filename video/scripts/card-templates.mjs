@@ -23,6 +23,27 @@ const pager = (page, color) =>
 const kickerRow = (text, color, mb = 26) =>
   h('div', {display: 'flex', fontSize: 26, fontWeight: 700, letterSpacing: 6, textTransform: 'uppercase', color, marginBottom: mb}, text);
 
+/** Entity chip: small logo + uppercase name, sits above the headline.
+ *  card.entity = {nome, logoDataUri} — logo already a transparent PNG data URI. */
+const entityChip = (entity, mode = 'dark') =>
+  entity
+    ? h(
+        'div',
+        {
+          display: 'flex', alignItems: 'center', alignSelf: 'flex-start',
+          backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(20,20,18,0.07)',
+          borderRadius: 40, padding: '10px 26px 10px 14px', marginBottom: 30, gap: 14,
+        },
+        entity.logoDataUri
+          ? {type: 'img', props: {src: entity.logoDataUri, width: 44, height: 44, style: {width: 44, height: 44, objectFit: 'contain'}}}
+          : null,
+        h('div', {
+          display: 'flex', fontSize: 27, fontWeight: 700, letterSpacing: 5,
+          textTransform: 'uppercase', color: mode === 'dark' ? 'rgba(255,255,255,0.92)' : INK,
+        }, entity.nome),
+      )
+    : null;
+
 /** Statement with accent phrases: yellow letters (dark) or yellow chip (light). */
 const accented = (text, highlights, fontSize, mode, extra = {}) => {
   const ranges = [];
@@ -106,6 +127,7 @@ export const templates = {
       h(
         'div',
         {position: 'absolute', left: 84, right: 84, bottom: 104, display: 'flex', flexDirection: 'column'},
+        entityChip(card.entity),
         accented(card.headline, card.highlights, fitHeadline(card.headline), 'dark', {
           lineHeight: 1.04,
           letterSpacing: -3,
@@ -135,10 +157,11 @@ export const templates = {
           style: {position: 'absolute', top: bandTop, left: 0, width: 1080, height: bandH, objectFit: 'cover'},
         },
       },
-      h('div', {position: 'absolute', top: bandTop + bandH + 16, left: 32, fontSize: 17, color: 'rgba(255,255,255,0.5)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`),
+      h('div', {position: 'absolute', top: bandTop + bandH - 42, left: 26, fontSize: 17, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 8px rgba(0,0,0,0.65)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`),
       h(
         'div',
         {position: 'absolute', left: 84, right: 84, bottom: 104, display: 'flex', flexDirection: 'column'},
+        entityChip(card.entity),
         accented(card.headline, card.highlights, fitHeadline(card.headline), 'dark', {
           lineHeight: 1.04,
           letterSpacing: -3,
@@ -184,7 +207,7 @@ export const templates = {
           style: {position: 'absolute', top: bandTop, left: 0, width: 1080, height: bandH, objectFit: 'cover'},
         },
       },
-      h('div', {position: 'absolute', top: bandTop + bandH + 16, left: 32, fontSize: 17, color: 'rgba(255,255,255,0.5)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`),
+      h('div', {position: 'absolute', top: bandTop + bandH - 42, left: 26, fontSize: 17, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 8px rgba(0,0,0,0.65)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`),
       h(
         'div',
         {position: 'absolute', left: 84, right: 84, bottom: 104, display: 'flex', flexDirection: 'column'},
