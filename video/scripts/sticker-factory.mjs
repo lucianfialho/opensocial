@@ -63,21 +63,39 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
     : inputBuf;
   const {svg, W, H} = await halftoneSvg(toneSource, {cells, cellPx, angleDeg});
   const halftone = await sharp(svg).png().toBuffer();
-  const mask = hasAlpha
-    ? await sharp(inputBuf).ensureAlpha().extractChannel('alpha').threshold(40).blur(1).threshold(96).toBuffer()
-    : await subjectMask(toneSource, W, H);
-  const maskResized = await sharp(mask).resize(W, H, {fit: 'fill'}).toBuffer();
+  let mask;
+  if (hasAlpha) {
+    // gentle threshold: glassy/soft parts of renders carry low alpha and
+    // must survive the cut
+    mask = await sharp(inputBuf).ensureAlpha().extractChannel('alpha').threshold(12).blur(1).threshold(40).toBuffer();
+    // some exports carry a fully-opaque alpha over a white ground — that is
+    // no mask at all; fall back to content-based cutting
+    const mstats = await sharp(mask).stats();
+    if (mstats.channels[0].mean > 235) mask = await subjectMask(toneSource, W, H);
+  } else {
+    mask = await subjectMask(toneSource, W, H);
+  }
 
-  // subject-only halftone: mask becomes the alpha channel
+  // everything below works on VERIFIED single-channel raw buffers — sharp's
+  // dest-in reads the input's alpha, so the mask must BE an alpha channel
+  const rawOpts = {raw: {width: W, height: H, channels: 1}};
+  const maskRaw = await sharp(mask).resize(W, H, {fit: 'fill'}).toColourspace('b-w').raw().toBuffer();
+  if (maskRaw.length !== W * H) throw new Error(`mask raw ${maskRaw.length} != ${W * H}`);
+  const dilatedRaw = await sharp(maskRaw, rawOpts).blur(border).threshold(24).toColourspace('b-w').raw().toBuffer();
+  if (dilatedRaw.length !== W * H) throw new Error(`dilated raw ${dilatedRaw.length} != ${W * H}`);
+
+  const maskAsAlpha = await sharp({create: {width: W, height: H, channels: 3, background: '#ffffff'}})
+    .joinChannel(maskRaw, rawOpts)
+    .png()
+    .toBuffer();
   const inked = await sharp(halftone)
-    .composite([{input: maskResized, blend: 'dest-in'}])
+    .composite([{input: maskAsAlpha, blend: 'dest-in'}])
     .png()
     .toBuffer();
 
-  // die-cut white base: the mask dilated outward
-  const dilated = await sharp(maskResized).blur(border).threshold(24).png().toBuffer();
-  const whiteBase = await sharp({create: {width: W, height: H, channels: 4, background: '#ffffff'}})
-    .composite([{input: dilated, blend: 'dest-in'}])
+  // die-cut white base: white pixels whose alpha is the dilated mask
+  const whiteBase = await sharp({create: {width: W, height: H, channels: 3, background: '#ffffff'}})
+    .joinChannel(dilatedRaw, rawOpts)
     .png()
     .toBuffer();
 
