@@ -5,7 +5,7 @@ import {loadFont} from '@remotion/fonts';
 import React, {useMemo} from 'react';
 import rough from 'roughjs';
 import {
-  AbsoluteFill, Audio, Img, interpolate, spring, staticFile,
+  AbsoluteFill, Audio, Img, interpolate, random, spring, staticFile,
   useCurrentFrame, useVideoConfig,
 } from 'remotion';
 import {z} from 'zod';
@@ -13,7 +13,7 @@ import {z} from 'zod';
 loadFont({family: 'Inter', url: staticFile('fonts/Inter-wght-800.ttf'), weight: '800'});
 loadFont({family: 'Gofar Serif', url: staticFile('fonts/GofarSerif.otf')});
 
-const CREAM = '#f5f0e7';
+const CREAM = '#f6f1e0';
 const INK = '#141412';
 const ACCENT = '#ffe234';
 
@@ -75,6 +75,23 @@ const useDrawOn = (startSec: number, durationFrames = 12) => {
   });
 };
 
+/** Vox jitter: posterized wiggle — a deterministic ±amp px offset that
+ *  only changes every `every` frames (the AE posterizeTime+wiggle trick). */
+const useJitter = (key: string, amp = 2.4, every = 5) => {
+  const frame = useCurrentFrame();
+  const step = Math.floor(frame / every);
+  return {
+    x: (random(`${key}-x-${step}`) - 0.5) * 2 * amp,
+    y: (random(`${key}-y-${step}`) - 0.5) * 2 * amp,
+  };
+};
+
+/** Boiling line: hand-drawn strokes redraw with a new seed every 8 frames. */
+const useBoil = (every = 8) => {
+  const frame = useCurrentFrame();
+  return Math.floor(frame / every) * 131;
+};
+
 const roughPaths = (draw: (g: ReturnType<typeof rough.generator>) => unknown) => {
   const g = rough.generator();
   return g.toPaths(draw(g) as never);
@@ -83,9 +100,10 @@ const roughPaths = (draw: (g: ReturnType<typeof rough.generator>) => unknown) =>
 /** Sketchy ellipse hugging its parent box (SVG stretches to the word). */
 const ScribbleCircle: React.FC<{startSec: number; seed: number}> = ({startSec, seed}) => {
   const progress = useDrawOn(startSec, 14);
+  const boil = useBoil();
   const paths = useMemo(
-    () => roughPaths((g) => g.ellipse(60, 24, 116, 46, {seed, roughness: 2.2, bowing: 2, stroke: INK, strokeWidth: 3.2, fill: 'none'})),
-    [seed],
+    () => roughPaths((g) => g.ellipse(60, 24, 116, 46, {seed: seed + boil, roughness: 2.2, bowing: 2, stroke: INK, strokeWidth: 3.2, fill: 'none'})),
+    [seed, boil],
   );
   if (progress <= 0) return null;
   return (
@@ -101,12 +119,13 @@ const ScribbleCircle: React.FC<{startSec: number; seed: number}> = ({startSec, s
 /** Hand-drawn curved arrow from the text zone up to the photo. */
 const ScribbleArrow: React.FC<{startSec: number; seed: number}> = ({startSec, seed}) => {
   const progress = useDrawOn(startSec + 0.5, 16);
+  const boil = useBoil();
   const paths = useMemo(
     () =>
       roughPaths((g) =>
-        g.curve([[905, 480], [968, 350], [925, 210], [830, 120]], {seed, roughness: 1.6, bowing: 1.5, stroke: INK, strokeWidth: 5, fill: 'none'}),
+        g.curve([[905, 480], [968, 350], [925, 210], [830, 120]], {seed: seed + boil, roughness: 1.6, bowing: 1.5, stroke: INK, strokeWidth: 5, fill: 'none'}),
       ),
-    [seed],
+    [seed, boil],
   );
   const headP = interpolate(progress, [0.85, 1], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   if (progress <= 0) return null;
@@ -126,8 +145,10 @@ const ScribbleArrow: React.FC<{startSec: number; seed: number}> = ({startSec, se
 };
 
 /** Emphasis dashes bursting around the big number. */
-const Burst: React.FC<{startSec: number; seed: number}> = ({startSec, seed}) => {
+const Burst: React.FC<{startSec: number; seed: number}> = ({startSec, seed: baseSeed}) => {
   const progress = useDrawOn(startSec + 0.25, 10);
+  const boil = useBoil();
+  const seed = baseSeed + boil;
   const rays = useMemo(() => {
     const g = rough.generator();
     const out: {d: string}[] = [];
@@ -152,6 +173,57 @@ const Burst: React.FC<{startSec: number; seed: number}> = ({startSec, seed}) => 
   );
 };
 
+/** Sketch-pad ground: sparse faint pencil lines, gently boiling. */
+const SketchGround: React.FC = () => {
+  const boil = useBoil(12);
+  const paths = useMemo(() => {
+    const g = rough.generator();
+    const out: {d: string; w: number}[] = [];
+    for (let i = 0; i < 12; i++) {
+      const horiz = random(`sk-o-${i}`) > 0.35;
+      const x = random(`sk-x-${i}`) * 1080;
+      const y = random(`sk-y-${i}`) * 1920;
+      const len = 140 + random(`sk-l-${i}`) * 420;
+      const x2 = horiz ? x + len : x + (random(`sk-dx-${i}`) - 0.5) * 90;
+      const y2 = horiz ? y + (random(`sk-dy-${i}`) - 0.5) * 60 : y + len;
+      const line = g.line(x, y, x2, y2, {seed: 900 + i + boil, roughness: 2.6, bowing: 3, stroke: INK, strokeWidth: 2, fill: 'none'});
+      g.toPaths(line).forEach((p) => out.push({d: p.d, w: 1.4 + random(`sk-w-${i}`) * 1.4}));
+    }
+    return out;
+  }, [boil]);
+  return (
+    <svg viewBox="0 0 1080 1920" style={{position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.075, pointerEvents: 'none'}}>
+      {paths.map((p, i) => (
+        <path key={i} d={p.d} fill="none" stroke={INK} strokeWidth={p.w} strokeLinecap="round" />
+      ))}
+    </svg>
+  );
+};
+
+/** Film grain: turbulence re-seeded every few frames, overlay-blended. */
+const Grain: React.FC = () => {
+  const boil = useBoil(4);
+  return (
+    <svg viewBox="0 0 1080 1920" style={{position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.055, mixBlendMode: 'overlay' as const, pointerEvents: 'none'}}>
+      <filter id="grain">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} seed={boil} stitchTiles="stitch" />
+        <feColorMatrix type="saturate" values="0" />
+      </filter>
+      <rect width="1080" height="1920" filter="url(#grain)" />
+    </svg>
+  );
+};
+
+/** Global luminance flicker, posterized and very subtle. */
+const Flicker: React.FC = () => {
+  const frame = useCurrentFrame();
+  const step = Math.floor(frame / 5);
+  const lum = (random(`flick-${step}`) - 0.5) * 0.05;
+  return (
+    <AbsoluteFill style={{backgroundColor: lum > 0 ? 'white' : 'black', opacity: Math.abs(lum), pointerEvents: 'none'}} />
+  );
+};
+
 /** Entity sticker: pill with logo + name, slaps in with a spring.
  *  onPhoto mode lands it on the polaroid's corner, like a real sticker. */
 const EntitySticker: React.FC<{
@@ -161,6 +233,7 @@ const EntitySticker: React.FC<{
 }> = ({entity, startSec, onPhoto = false}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
+  const jit = useJitter(`sticker-${entity.nome}`, 2);
   const delay = onPhoto ? 0.9 : 0.35;
   const enter = spring({frame: frame - (startSec + delay) * fps, fps, config: {damping: 11, stiffness: 190}});
   if (frame < (startSec + delay) * fps) return null;
@@ -175,7 +248,7 @@ const EntitySticker: React.FC<{
         display: 'flex', alignItems: 'center', gap: 18,
         background: 'white', borderRadius: 60, padding: '16px 34px 16px 22px',
         boxShadow: '0 14px 34px rgba(20,20,18,0.3)',
-        transform: `scale(${0.4 + enter * 0.6}) rotate(${onPhoto ? -7 + enter * 2 : -10 + enter * 6}deg)`,
+        transform: `translate(${jit.x}px, ${jit.y}px) scale(${0.4 + enter * 0.6}) rotate(${onPhoto ? -7 + enter * 2 : -10 + enter * 6}deg)`,
         transformOrigin: 'left center',
         opacity: Math.min(1, enter * 1.4),
       }}
@@ -241,6 +314,7 @@ const KineticWord: React.FC<{
 const PhotoMoment: React.FC<{seg: Seg}> = ({seg}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
+  const jit = useJitter('photo', 1.8);
   const enter = spring({frame: frame - seg.startSec * fps, fps, config: {damping: 16, stiffness: 90}});
   if (!seg.image) return null;
   return (
@@ -249,7 +323,7 @@ const PhotoMoment: React.FC<{seg: Seg}> = ({seg}) => {
         position: 'absolute', top: 250, left: 70, right: 70, height: 780,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         opacity: enter,
-        transform: `translateY(${(1 - enter) * 140}px) rotate(${-2.2 + enter * 0.7}deg)`,
+        transform: `translate(${jit.x}px, ${(1 - enter) * 140 + jit.y}px) rotate(${-2.2 + enter * 0.7}deg)`,
       }}
     >
       <div style={{background: 'white', padding: 18, paddingBottom: 46, boxShadow: '0 30px 60px rgba(20,20,18,0.28)', borderRadius: 6, position: 'relative'}}>
@@ -267,6 +341,7 @@ const PhotoMoment: React.FC<{seg: Seg}> = ({seg}) => {
 export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
   const frame = useCurrentFrame();
   const {fps, durationInFrames} = useVideoConfig();
+  const textJit = useJitter('text-zone', 1.6);
   const t = frame / fps;
   const segs = sliceSegments(props);
   const active = segs.find((s, i) => t < (segs[i + 1]?.startSec ?? Infinity)) ?? segs[segs.length - 1];
@@ -280,6 +355,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
   return (
     <AbsoluteFill style={{backgroundColor: CREAM, fontFamily: 'Inter', fontWeight: 800 as const}}>
       {props.audioSrc !== 'none' ? <Audio src={staticFile(props.audioSrc)} /> : null}
+      <SketchGround />
       <Masthead brand={props.brand} />
 
       {active?.image ? <PhotoMoment seg={active} /> : null}
@@ -293,6 +369,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
             position: 'absolute', left: 84, right: 84,
             top: active.image ? 1080 : 0, bottom: 170,
             display: 'flex', flexDirection: 'column', justifyContent: active.image ? 'flex-start' : 'center',
+            transform: `translate(${textJit.x}px, ${textJit.y}px)`,
           }}
         >
           <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', fontSize: active.big ? 84 : active.image ? 72 : 96, lineHeight: 1.14, letterSpacing: -2, color: INK}}>
@@ -316,6 +393,9 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
           <div style={{fontSize: 40, color: ACCENT, marginTop: 18}}>{props.handle}</div>
         </AbsoluteFill>
       ) : null}
+
+      <Grain />
+      <Flicker />
 
       {/* narration progress */}
       <div style={{position: 'absolute', left: 84, right: 84, bottom: 110, height: 8, background: 'rgba(20,20,18,0.12)', borderRadius: 4}}>
