@@ -1,0 +1,29 @@
+{
+  "maquina-escrever": {
+    "titulo": "File:Parts of a Corona No. 3 folding typewriter (front).jpg",
+    "fonte": "https://commons.wikimedia.org/wiki/File:Parts_of_a_Corona_No._3_folding_typewriter_(front).jpg",
+    "licenca": "Public domain (Wikimedia Commons)"
+  },
+  "camera": {
+    "titulo": "File:Chinon CP 9 AF BW 1.JPG",
+    "fonte": "https://commons.wikimedia.org/wiki/File:Chinon_CP_9_AF_BW_1.JPG",
+    "licenca": "Public domain (Wikimedia Commons)"
+  },
+  "lupa": {
+    "titulo": "File:Magnifying Glass MET ADA5941.jpg",
+    "fonte": "https://commons.wikimedia.org/wiki/File:Magnifying_Glass_MET_ADA5941.jpg",
+    "licenca": "CC0 (Wikimedia Commons)"
+  },
+  "globo": {
+    "met": 8487,
+    "titulo": "Terrestrial Globe",
+    "fonte": "https://www.metmuseum.org/art/collection/search/8487",
+    "licenca": "CC0 (Met Open Access)"
+  },
+  "relogio": {
+    "met": 187197,
+    "titulo": "Pocket watch",
+    "fonte": "https://www.metmuseum.org/art/collection/search/187197",
+    "licenca": "CC0 (Met Open Access)"
+  }
+}
