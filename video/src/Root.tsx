@@ -1,5 +1,6 @@
 import React from 'react';
 import {Composition, Still} from 'remotion';
+import {VoxExplainer, voxExplainerSchema, calculateVoxMetadata} from './VoxExplainer';
 import {ArticleHighlight} from './ArticleHighlight';
 import {NewsReel, calculateNewsReelMetadata, newsReelSchema} from './NewsReel';
 import {NewsSplit, calculateNewsSplitMetadata, newsSplitSchema} from './NewsSplit';
@@ -133,6 +134,24 @@ export const RemotionRoot: React.FC = () => {
           image: null,
           variant: 'body' as const,
           fit: 'cover' as const,
+        }}
+      />
+      <Composition
+        id="VoxExplainer"
+        component={VoxExplainer}
+        schema={voxExplainerSchema}
+        calculateMetadata={calculateVoxMetadata}
+        durationInFrames={600}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          brand: 'o agêntico',
+          handle: '@oagentico',
+          audioSrc: 'audio/placeholder.mp3',
+          durationInFrames: 600,
+          words: [],
+          segments: [],
         }}
       />
       <Composition
