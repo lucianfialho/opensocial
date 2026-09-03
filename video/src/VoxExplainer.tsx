@@ -31,6 +31,7 @@ export const voxExplainerSchema = z.object({
       circle: z.string().nullable().default(null),
       arrow: z.boolean().default(false),
       entity: z.object({nome: z.string(), logo: z.string().nullable(), logoW: z.number().optional(), logoH: z.number().optional()}).nullable().default(null),
+      prop: z.object({src: z.string(), x: z.number(), y: z.number(), w: z.number(), rot: z.number().default(-4)}).nullable().default(null),
       image: z.string().nullable().default(null),
       credit: z.string().nullable().default(null),
     }),
@@ -259,6 +260,30 @@ const EntitySticker: React.FC<{
   );
 };
 
+/** Halftone prop from the collage library: slaps in like a cutout. */
+const PropSticker: React.FC<{
+  prop: {src: string; x: number; y: number; w: number; rot: number};
+  startSec: number;
+}> = ({prop, startSec}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const jit = useJitter(`prop-${prop.src}`, 2.2);
+  const enter = spring({frame: frame - (startSec + 0.55) * fps, fps, config: {damping: 12, stiffness: 160}});
+  if (frame < (startSec + 0.55) * fps) return null;
+  return (
+    <Img
+      src={staticFile(prop.src)}
+      style={{
+        position: 'absolute', left: prop.x, top: prop.y, width: prop.w,
+        transform: `translate(${jit.x}px, ${jit.y}px) scale(${0.5 + enter * 0.5}) rotate(${prop.rot + (1 - enter) * 9}deg)`,
+        transformOrigin: 'center',
+        opacity: Math.min(1, enter * 1.5),
+        filter: 'drop-shadow(0 12px 26px rgba(20,20,18,0.25))',
+      }}
+    />
+  );
+};
+
 const Masthead: React.FC<{brand: string}> = ({brand}) => (
   <div style={{position: 'absolute', top: 84, left: 0, right: 0, display: 'flex', justifyContent: 'center', fontFamily: 'Gofar Serif', fontSize: 64, color: INK}}>
     {brand.replace(/\s+/g, '')}
@@ -361,6 +386,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
       {active?.image ? <PhotoMoment seg={active} /> : null}
       {active?.image && active.arrow ? <ScribbleArrow startSec={active.startSec} seed={41} /> : null}
       {active?.entity && !endCard ? <EntitySticker entity={active.entity} startSec={active.startSec} onPhoto={Boolean(active.image)} /> : null}
+      {active?.prop && !endCard ? <PropSticker prop={active.prop} startSec={active.startSec} /> : null}
 
       {/* kinetic type zone: lower half when a photo is up, centered otherwise */}
       {active && !endCard ? (
