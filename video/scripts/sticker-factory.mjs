@@ -54,9 +54,18 @@ async function subjectMask(buf, W, H) {
 
 export async function makeSticker(inputBuf, outPath, opts = {}) {
   const {cells = 96, cellPx = 9, angleDeg = 4, border = 14} = opts;
-  const {svg, W, H} = await halftoneSvg(inputBuf, {cells, cellPx, angleDeg});
+  const meta = await sharp(inputBuf).metadata();
+  // transparent sources (icon packs, renders): flatten to white for the
+  // halftone read, and use the existing alpha as the subject mask directly
+  const hasAlpha = Boolean(meta.hasAlpha);
+  const toneSource = hasAlpha
+    ? await sharp(inputBuf).flatten({background: '#ffffff'}).png().toBuffer()
+    : inputBuf;
+  const {svg, W, H} = await halftoneSvg(toneSource, {cells, cellPx, angleDeg});
   const halftone = await sharp(svg).png().toBuffer();
-  const mask = await subjectMask(inputBuf, W, H);
+  const mask = hasAlpha
+    ? await sharp(inputBuf).ensureAlpha().extractChannel('alpha').threshold(40).blur(1).threshold(96).toBuffer()
+    : await subjectMask(toneSource, W, H);
   const maskResized = await sharp(mask).resize(W, H, {fit: 'fill'}).toBuffer();
 
   // subject-only halftone: mask becomes the alpha channel
