@@ -117,6 +117,40 @@ export const templates = {
       pager(card.page, 'rgba(255,255,255,0.7)'),
     ),
 
+  // landscape cover: the photo runs as a full-width band at its natural
+  // aspect (no crop, no scrim over the subject); headline gets its own zone
+  titleBand: (card) => {
+    const ratio = card.image?.ratio ?? 1.5;
+    const bandH = Math.min(760, Math.round(1080 / ratio));
+    const bandTop = 176;
+    return shell(
+      '#101013',
+      masthead(card.brand, 'white'),
+      {
+        type: 'img',
+        props: {
+          src: card.image.dataUri,
+          width: 1080,
+          height: bandH,
+          style: {position: 'absolute', top: bandTop, left: 0, width: 1080, height: bandH, objectFit: 'cover'},
+        },
+      },
+      h('div', {position: 'absolute', top: bandTop + bandH + 16, left: 32, fontSize: 17, color: 'rgba(255,255,255,0.5)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`),
+      h(
+        'div',
+        {position: 'absolute', left: 84, right: 84, bottom: 104, display: 'flex', flexDirection: 'column'},
+        accented(card.headline, card.highlights, fitHeadline(card.headline), 'dark', {
+          lineHeight: 1.04,
+          letterSpacing: -3,
+        }),
+        card.subtitle
+          ? h('div', {display: 'flex', fontSize: 40, fontWeight: 400, lineHeight: 1.35, color: 'rgba(255,255,255,0.92)', marginTop: 28}, card.subtitle)
+          : null,
+      ),
+      pager(card.page, 'rgba(255,255,255,0.7)'),
+    );
+  },
+
   body: (card) =>
     shell(
       '#101013',
@@ -132,6 +166,34 @@ export const templates = {
       ),
       pager(card.page, 'rgba(255,255,255,0.7)'),
     ),
+
+  // landscape body: same band treatment as titleBand, with the kicker
+  bodyBand: (card) => {
+    const ratio = card.image?.ratio ?? 1.5;
+    const bandH = Math.min(760, Math.round(1080 / ratio));
+    const bandTop = 176;
+    return shell(
+      '#101013',
+      masthead(card.brand, 'white'),
+      {
+        type: 'img',
+        props: {
+          src: card.image.dataUri,
+          width: 1080,
+          height: bandH,
+          style: {position: 'absolute', top: bandTop, left: 0, width: 1080, height: bandH, objectFit: 'cover'},
+        },
+      },
+      h('div', {position: 'absolute', top: bandTop + bandH + 16, left: 32, fontSize: 17, color: 'rgba(255,255,255,0.5)'}, `* ${card.image.credit.replace(/^Foto: /, '')}`),
+      h(
+        'div',
+        {position: 'absolute', left: 84, right: 84, bottom: 104, display: 'flex', flexDirection: 'column'},
+        kickerRow(card.kicker, 'rgba(255,255,255,0.8)', 18),
+        accented(card.headline, card.highlights, Math.min(92, fitHeadline(card.headline, 912)), 'dark', {lineHeight: 1.08, letterSpacing: -2}),
+      ),
+      pager(card.page, 'rgba(255,255,255,0.7)'),
+    );
+  },
 
   essay: (card) =>
     shell(
