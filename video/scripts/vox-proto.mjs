@@ -15,7 +15,7 @@ const EVENT_ID = 28012; // Dropbox: bastava seu e-mail
 const SEGMENTS = [
   {text: 'Bastava saber o seu e-mail. Nada mais.', highlights: ['seu e-mail'], big: null, circle: null, arrow: false, image: null, credit: null},
   {text: '5 mil contas do Dropbox foram invadidas sem que ninguém digitasse uma senha.', highlights: [], big: '5', circle: 'senha', arrow: false, entity: {nome: 'Dropbox', logo: 'vox/logo-dropbox.png'}, image: null, credit: null},
-  {text: 'A brecha veio de um recurso da Lenovo, que confirmava o login sozinho.', highlights: ['confirmava o login sozinho'], big: null, circle: null, arrow: true, image: 'vox/hero-28012.jpg', credit: 'g1.globo.com'},
+  {text: 'A brecha veio de um recurso da Lenovo, que confirmava o login sozinho.', highlights: ['confirmava o login sozinho'], big: null, circle: null, arrow: true, entity: {nome: 'Lenovo', logo: 'vox/logo-lenovo.png', logoW: 140, logoH: 30}, image: 'vox/hero-28012.jpg', credit: 'g1.globo.com'},
   {text: 'O Dropbox diz que já bloqueou as contas afetadas.', highlights: [], big: null, circle: 'bloqueou', arrow: false, image: null, credit: null},
   {text: 'Mas fica a pergunta: quantos serviços confiam demais no seu e-mail?', highlights: ['confiam demais'], big: null, circle: null, arrow: false, image: null, credit: null},
 ];

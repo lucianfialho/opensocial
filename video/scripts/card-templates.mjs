@@ -35,7 +35,7 @@ const entityChip = (entity, mode = 'dark') =>
           borderRadius: 40, padding: '10px 26px 10px 14px', marginBottom: 30, gap: 14,
         },
         entity.logoDataUri
-          ? {type: 'img', props: {src: entity.logoDataUri, width: 44, height: 44, style: {width: 44, height: 44, objectFit: 'contain'}}}
+          ? {type: 'img', props: {src: entity.logoDataUri, width: entity.logoW ?? 44, height: entity.logoH ?? 44, style: {width: entity.logoW ?? 44, height: entity.logoH ?? 44, objectFit: 'contain'}}}
           : null,
         h('div', {
           display: 'flex', fontSize: 27, fontWeight: 700, letterSpacing: 5,

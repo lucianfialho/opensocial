@@ -30,7 +30,7 @@ export const voxExplainerSchema = z.object({
       big: z.string().nullable().default(null),
       circle: z.string().nullable().default(null),
       arrow: z.boolean().default(false),
-      entity: z.object({nome: z.string(), logo: z.string().nullable()}).nullable().default(null),
+      entity: z.object({nome: z.string(), logo: z.string().nullable(), logoW: z.number().optional(), logoH: z.number().optional()}).nullable().default(null),
       image: z.string().nullable().default(null),
       credit: z.string().nullable().default(null),
     }),
@@ -152,25 +152,35 @@ const Burst: React.FC<{startSec: number; seed: number}> = ({startSec, seed}) => 
   );
 };
 
-/** Entity sticker: pill with logo + name, slaps in with a spring. */
-const EntitySticker: React.FC<{entity: {nome: string; logo: string | null}; startSec: number}> = ({entity, startSec}) => {
+/** Entity sticker: pill with logo + name, slaps in with a spring.
+ *  onPhoto mode lands it on the polaroid's corner, like a real sticker. */
+const EntitySticker: React.FC<{
+  entity: {nome: string; logo: string | null; logoW?: number; logoH?: number};
+  startSec: number;
+  onPhoto?: boolean;
+}> = ({entity, startSec, onPhoto = false}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const enter = spring({frame: frame - (startSec + 0.35) * fps, fps, config: {damping: 11, stiffness: 190}});
-  if (frame < (startSec + 0.35) * fps) return null;
+  const delay = onPhoto ? 0.9 : 0.35;
+  const enter = spring({frame: frame - (startSec + delay) * fps, fps, config: {damping: 11, stiffness: 190}});
+  if (frame < (startSec + delay) * fps) return null;
+  const w = entity.logoW ?? 58;
+  const hgt = entity.logoH ?? 58;
   return (
     <div
       style={{
-        position: 'absolute', top: 250, left: 84,
+        position: 'absolute',
+        top: onPhoto ? 296 : 250,
+        left: onPhoto ? 96 : 84,
         display: 'flex', alignItems: 'center', gap: 18,
-        background: 'white', borderRadius: 60, padding: '16px 34px 16px 20px',
-        boxShadow: '0 14px 34px rgba(20,20,18,0.22)',
-        transform: `scale(${0.4 + enter * 0.6}) rotate(${-10 + enter * 6}deg)`,
+        background: 'white', borderRadius: 60, padding: '16px 34px 16px 22px',
+        boxShadow: '0 14px 34px rgba(20,20,18,0.3)',
+        transform: `scale(${0.4 + enter * 0.6}) rotate(${onPhoto ? -7 + enter * 2 : -10 + enter * 6}deg)`,
         transformOrigin: 'left center',
         opacity: Math.min(1, enter * 1.4),
       }}
     >
-      {entity.logo ? <Img src={staticFile(entity.logo)} style={{width: 58, height: 58, objectFit: 'contain'}} /> : null}
+      {entity.logo ? <Img src={staticFile(entity.logo)} style={{width: w, height: hgt, objectFit: 'contain'}} /> : null}
       <div style={{fontSize: 34, fontWeight: 800, letterSpacing: 5, color: INK}}>{entity.nome.toUpperCase()}</div>
     </div>
   );
@@ -274,7 +284,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
 
       {active?.image ? <PhotoMoment seg={active} /> : null}
       {active?.image && active.arrow ? <ScribbleArrow startSec={active.startSec} seed={41} /> : null}
-      {active?.entity && !active.image && !endCard ? <EntitySticker entity={active.entity} startSec={active.startSec} /> : null}
+      {active?.entity && !endCard ? <EntitySticker entity={active.entity} startSec={active.startSec} onPhoto={Boolean(active.image)} /> : null}
 
       {/* kinetic type zone: lower half when a photo is up, centered otherwise */}
       {active && !endCard ? (
