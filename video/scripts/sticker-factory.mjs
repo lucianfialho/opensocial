@@ -15,6 +15,9 @@ async function halftoneSvg(buf, {cells, cellPx, angleDeg, subjectMaskBuf = null}
     .resize(cells, cells, {fit: 'inside'})
     .raw()
     .toBuffer({resolveWithObject: true});
+  // deepen shadows: sticker look needs dense blacks, not washed grays
+  const contrasted = data.map((v) => Math.max(0, Math.min(255, Math.round((v - 128) * 1.45 + 118))));
+  data.set ? contrasted.forEach((v, i) => (data[i] = v)) : null;
   let maskCells = null;
   if (subjectMaskBuf) {
     maskCells = await sharp(subjectMaskBuf)
@@ -75,7 +78,7 @@ async function subjectMask(buf, W, H) {
 }
 
 export async function makeSticker(inputBuf, outPath, opts = {}) {
-  const {cells = 96, cellPx = 9, angleDeg = 4, border = 20} = opts;
+  const {cells = 110, cellPx = 8, angleDeg = 4, border = 30} = opts;
   const meta = await sharp(inputBuf).metadata();
   // transparent sources (icon packs, renders): flatten to white for the
   // halftone read, and use the existing alpha as the subject mask directly
@@ -113,26 +116,33 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
     : maskRaw;
   if (dilatedRaw.length !== W * H) throw new Error(`dilated raw ${dilatedRaw.length} != ${W * H}`);
 
-  // torn-paper border: the inner band of the die-cut is solid, the outer
-  // ring survives only where chunky deterministic noise says so
-  const midRaw = border > 0
-    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.45)).threshold(24).toColourspace('b-w').raw().toBuffer()
-    : maskRaw;
-  let seedState = 987654321;
-  const rand = () => ((seedState = (seedState * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
-  const bs = 6;
-  const bw = Math.ceil(W / bs);
-  const blockNoise = new Uint8Array(bw * Math.ceil(H / bs));
-  for (let i = 0; i < blockNoise.length; i++) blockNoise[i] = rand() > 0.42 ? 255 : 0;
-  const torn = Buffer.alloc(W * H);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = y * W + x;
-      if (midRaw[i] > 128) torn[i] = 255;
-      else if (dilatedRaw[i] > 128) torn[i] = blockNoise[Math.floor(y / bs) * bw + Math.floor(x / bs)];
+  // torn-paper border: solid inner band + chunky wave noise in the outer
+  // ring, smoothed into a ragged paper contour (not speckle)
+  const tornEdge = async (fullRaw, solidRaw, blockSize, seed0) => {
+    let seedState = seed0;
+    const rand = () => ((seedState = (seedState * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    const bw2 = Math.ceil(W / blockSize);
+    const blockNoise = new Uint8Array(bw2 * Math.ceil(H / blockSize));
+    for (let i = 0; i < blockNoise.length; i++) blockNoise[i] = rand() > 0.4 ? 255 : 0;
+    const torn = Buffer.alloc(W * H);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        if (solidRaw[i] > 128) torn[i] = 255;
+        else if (fullRaw[i] > 128) torn[i] = blockNoise[Math.floor(y / blockSize) * bw2 + Math.floor(x / blockSize)];
+      }
     }
-  }
-  const tornRaw = await sharp(torn, rawOpts).blur(1.3).threshold(110).toColourspace('b-w').raw().toBuffer();
+    return sharp(torn, rawOpts).blur(3.2).threshold(128).toColourspace('b-w').raw().toBuffer();
+  };
+  const midRaw = border > 0
+    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.5)).threshold(24).toColourspace('b-w').raw().toBuffer()
+    : maskRaw;
+  const tornRaw = border > 0 ? await tornEdge(dilatedRaw, midRaw, 11, 987654321) : maskRaw;
+  // the black backing layer between white paper and halftone — the punch
+  const inkFullRaw = border > 0
+    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.42)).threshold(24).toColourspace('b-w').raw().toBuffer()
+    : maskRaw;
+  const inkTornRaw = border > 0 ? await tornEdge(inkFullRaw, maskRaw, 7, 246813579) : null;
 
   const maskAsAlpha = await sharp({create: {width: W, height: H, channels: 3, background: '#ffffff'}})
     .joinChannel(maskRaw, rawOpts)
@@ -149,7 +159,20 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
     .png()
     .toBuffer();
 
-  const layers = border > 0 ? [{input: whiteBase}, {input: inked}] : [{input: inked}];
+  const blackBase = inkTornRaw
+    ? await sharp({create: {width: W, height: H, channels: 3, background: '#141412'}})
+        .joinChannel(inkTornRaw, rawOpts)
+        .png()
+        .toBuffer()
+    : null;
+  // the subject itself is white paper — the halftone dots print ON it
+  const subjectPaper = await sharp({create: {width: W, height: H, channels: 3, background: '#fdfbf6'}})
+    .joinChannel(maskRaw, rawOpts)
+    .png()
+    .toBuffer();
+  const layers = border > 0
+    ? [{input: whiteBase}, {input: blackBase}, {input: subjectPaper}, {input: inked}]
+    : [{input: subjectPaper}, {input: inked}];
   // palette quantization (the TinyPNG trick, built into sharp): B&W
   // halftones collapse to a handful of colors — 5-10x smaller files
   await sharp({create: {width: W, height: H, channels: 4, background: {r: 0, g: 0, b: 0, alpha: 0}}})
