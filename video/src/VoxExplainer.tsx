@@ -22,6 +22,7 @@ export const voxExplainerSchema = z.object({
   brand: z.string(),
   handle: z.string(),
   audioSrc: z.string(),
+  musicSrc: z.string().nullable().default(null),
   durationInFrames: z.number(),
   words: z.array(z.object({text: z.string(), start: z.number(), end: z.number()})),
   segments: z.array(
@@ -482,6 +483,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
   return (
     <AbsoluteFill style={{backgroundColor: CREAM, fontFamily: 'Inter', fontWeight: 800 as const}}>
       {props.audioSrc !== 'none' ? <Audio src={staticFile(props.audioSrc)} /> : null}
+      {props.musicSrc ? <Audio src={staticFile(props.musicSrc)} volume={0.12} loop /> : null}
       <SfxTrack segs={segs} fps={fps} />
       <SketchGround />
       <Masthead brand={props.brand} />

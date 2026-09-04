@@ -165,10 +165,18 @@ try {
   clip = {src: 'none', words, durationInFrames: Math.ceil((words.at(-1).end + 0.8) * FPS)};
 }
 
+// music bed picked by the script's dominant voice direction
+const toms = script.beats.map((b) => b.tom);
+const musicSrc = toms.filter((t) => ['dramatic', 'serious', 'whispers'].includes(t)).length >= toms.length / 2
+  ? 'trilhas/tensa.mp3'
+  : toms.includes('excited') ? 'trilhas/curiosa.mp3' : 'trilhas/leve.mp3';
+log(`trilha: ${musicSrc}`);
+
 const props = {
   brand: 'o agêntico',
   handle: '@oagentico',
   audioSrc: clip.src,
+  musicSrc,
   durationInFrames: clip.durationInFrames + 45,
   words: clip.words,
   segments,

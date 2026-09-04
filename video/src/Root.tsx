@@ -149,6 +149,7 @@ export const RemotionRoot: React.FC = () => {
           brand: 'o agêntico',
           handle: '@oagentico',
           audioSrc: 'audio/placeholder.mp3',
+          musicSrc: null,
           durationInFrames: 600,
           words: [],
           segments: [],
