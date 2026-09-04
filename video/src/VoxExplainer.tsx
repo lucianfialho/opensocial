@@ -104,17 +104,19 @@ const roughPaths = (draw: (g: ReturnType<typeof rough.generator>) => unknown) =>
 /** Sketchy ellipse hugging its parent box (SVG stretches to the word). */
 const ScribbleCircle: React.FC<{startSec: number; seed: number}> = ({startSec, seed}) => {
   const progress = useDrawOn(startSec, 14);
-  const boil = useBoil();
+  const boil = useBoil(10);
+  // a loose ORBIT around the word — never a stroke through it (that reads
+  // as crossing the word out); single clean pass, gentle wobble
   const paths = useMemo(
-    () => roughPaths((g) => g.ellipse(60, 24, 116, 46, {seed: seed + boil, roughness: 2.2, bowing: 2, stroke: INK, strokeWidth: 3.2, fill: 'none'})),
+    () => roughPaths((g) => g.ellipse(60, 24, 148, 78, {seed: seed + boil, roughness: 1.3, bowing: 1, stroke: INK, strokeWidth: 3})),
     [seed, boil],
   );
   if (progress <= 0) return null;
   return (
-    <svg viewBox="0 0 120 48" preserveAspectRatio="none" style={{position: 'absolute', left: '-10%', top: '-18%', width: '120%', height: '136%', overflow: 'visible', pointerEvents: 'none'}}>
+    <svg viewBox="0 0 120 48" preserveAspectRatio="none" style={{position: 'absolute', left: '-14%', top: '-34%', width: '128%', height: '168%', overflow: 'visible', pointerEvents: 'none'}}>
       {paths.map((p, i) => (
-        <path key={i} d={p.d} fill="none" stroke={INK} strokeWidth={2.6} strokeLinecap="round"
-          pathLength={1} strokeDasharray={1} strokeDashoffset={1 - Math.min(1, progress * (i === 0 ? 1.15 : 0.95))} />
+        <path key={i} d={p.d} fill="none" stroke={INK} strokeWidth={2.4} strokeLinecap="round"
+          pathLength={1} strokeDasharray={1} strokeDashoffset={1 - Math.min(1, progress * 1.05)} />
       ))}
     </svg>
   );
@@ -127,7 +129,7 @@ const ScribbleArrow: React.FC<{startSec: number; seed: number}> = ({startSec, se
   const paths = useMemo(
     () =>
       roughPaths((g) =>
-        g.curve([[905, 480], [968, 350], [925, 210], [830, 120]], {seed: seed + boil, roughness: 1.6, bowing: 1.5, stroke: INK, strokeWidth: 5, fill: 'none'}),
+        g.curve([[905, 480], [968, 350], [925, 210], [830, 120]], {seed: seed + boil, roughness: 1.6, bowing: 1.5, stroke: INK, strokeWidth: 5}),
       ),
     [seed, boil],
   );
@@ -161,7 +163,7 @@ const Burst: React.FC<{startSec: number; seed: number}> = ({startSec, seed: base
       const a = (deg * Math.PI) / 180;
       const r1 = 78, r2 = 128;
       const line = g.line(160 + Math.cos(a) * r1, 120 + Math.sin(a) * r1, 160 + Math.cos(a) * r2, 120 + Math.sin(a) * r2,
-        {seed: seed + i, roughness: 1.8, stroke: INK, strokeWidth: 6, fill: 'none'});
+        {seed: seed + i, roughness: 1.8, stroke: INK, strokeWidth: 6});
       g.toPaths(line).forEach((p) => out.push({d: p.d}));
     });
     return out;
@@ -190,7 +192,7 @@ const SketchGround: React.FC = () => {
       const len = 140 + random(`sk-l-${i}`) * 420;
       const x2 = horiz ? x + len : x + (random(`sk-dx-${i}`) - 0.5) * 90;
       const y2 = horiz ? y + (random(`sk-dy-${i}`) - 0.5) * 60 : y + len;
-      const line = g.line(x, y, x2, y2, {seed: 900 + i + boil, roughness: 2.6, bowing: 3, stroke: INK, strokeWidth: 2, fill: 'none'});
+      const line = g.line(x, y, x2, y2, {seed: 900 + i + boil, roughness: 2.6, bowing: 3, stroke: INK, strokeWidth: 2});
       g.toPaths(line).forEach((p) => out.push({d: p.d, w: 1.4 + random(`sk-w-${i}`) * 1.4}));
     }
     return out;
