@@ -33,7 +33,7 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
   for (const p of platforms) {
     const adapter = adapters[p]
     const ep = effectivePost(post, p)
-    const options = { tiktokPrivacyLevel: config.tiktok?.privacyLevel }
+    const options = { tiktokPrivacyLevel: config.tiktok?.privacyLevel, thumbOffsetMs: post.thumbOffsetMs }
     let cleanup: (() => Promise<void>) | undefined
     try {
       const resolved = await resolveMedia(ep.media, adapter.mediaIngestion, host)

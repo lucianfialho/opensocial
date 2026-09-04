@@ -168,6 +168,26 @@ const propsPath = join(root, 'out', `vox-${id}.props.json`);
 writeFileSync(propsPath, JSON.stringify(props, null, 2));
 writeFileSync(join(root, 'out', `vox-${id}.caption.txt`), script.caption);
 
+// hero moment for the reel cover (thumb_offset): the big-number word if
+// there is one, else the ransom beat, else the photo beat, else 40% in
+const heroMs = (() => {
+  const segStarts = (pred) => {
+    const i = segments.findIndex(pred);
+    if (i < 0) return null;
+    const count = segments.slice(0, i + 1).map((sg) => sg.text.split(/\s+/).filter(Boolean).length).reduce((a, b) => a + b, 0);
+    return clip.words[Math.min(count - 1, clip.words.length - 1)]?.end ?? null;
+  };
+  const bigSeg = segStarts((sg) => sg.big);
+  if (bigSeg != null) return Math.round(bigSeg * 1000);
+  const ransomSeg = segStarts((sg) => sg.ransom);
+  if (ransomSeg != null) return Math.round(ransomSeg * 1000);
+  const photoSeg = segStarts((sg) => sg.image);
+  if (photoSeg != null) return Math.round(photoSeg * 1000);
+  return Math.round((clip.durationInFrames / FPS) * 0.4 * 1000);
+})();
+writeFileSync(join(root, 'out', `vox-${id}.thumb.txt`), String(heroMs));
+log(`capa (thumb_offset): ${heroMs}ms`);
+
 if (dry) {
   log(`--dry: props em ${propsPath}`);
   process.exit(0);

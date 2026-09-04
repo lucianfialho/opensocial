@@ -8,6 +8,8 @@ export interface MediaItem { source: string; alt?: string }
 export interface Post {
   text?: string
   media?: MediaItem[]
+  /** Reel cover frame, in ms from the start (Instagram thumb_offset). */
+  thumbOffsetMs?: number
   overrides?: Partial<Record<Platform, { text?: string; media?: MediaItem[] }>>
 }
 

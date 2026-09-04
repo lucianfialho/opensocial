@@ -98,7 +98,7 @@ export const instagramAdapter: PlatformAdapter = {
     return issues
   },
 
-  async publish(account, post, _options, fetchImpl = globalThis.fetch): Promise<PublishResult> {
+  async publish(account, post, options, fetchImpl = globalThis.fetch): Promise<PublishResult> {
     const token = account.accessToken
     let creationId: string
 
@@ -122,6 +122,7 @@ export const instagramAdapter: PlatformAdapter = {
     if (post.media.length === 1 && post.media[0].kind === 'video') {
       creationId = await createContainer(account.id, token, {
         media_type: 'REELS', video_url: post.media[0].url!, caption: post.text,
+        ...(options.thumbOffsetMs != null ? { thumb_offset: String(options.thumbOffsetMs) } : {}),
       }, fetchImpl)
       await awaitFinished(creationId, 'instagram video processing')
     } else if (post.media.length === 1) {

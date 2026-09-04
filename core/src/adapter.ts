@@ -39,6 +39,7 @@ export interface PlatformAdapter {
 
 export interface AdapterPublishOptions {
   tiktokPrivacyLevel?: string
+  thumbOffsetMs?: number
 }
 
 export const adapters: Record<Platform, PlatformAdapter> = {
