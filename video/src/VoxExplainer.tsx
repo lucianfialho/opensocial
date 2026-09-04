@@ -361,7 +361,9 @@ const KineticWord: React.FC<{
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const startFrame = word.start * fps;
-  const pop = spring({frame: frame - startFrame, fps, config: {damping: 200, stiffness: 240}});
+  // lower damping = slight overshoot: the word lands with a bounce
+  const pop = spring({frame: frame - startFrame, fps, config: {damping: 13, stiffness: 260}});
+  const settleRot = (random(`kw-rot-${seed}-${word.text}`) - 0.5) * 9 * (1 - Math.min(1, pop));
   const visible = frame >= startFrame;
   // the marker sweeps across the word right after it lands
   const sweep = interpolate(frame - startFrame, [2, 9], [0, 100], {
@@ -371,8 +373,8 @@ const KineticWord: React.FC<{
     <span
       style={{
         display: 'inline-block',
-        opacity: visible ? pop : 0,
-        transform: `translateY(${(1 - pop) * 26}px)`,
+        opacity: visible ? Math.min(1, pop * 1.3) : 0,
+        transform: `translateY(${(1 - pop) * 30}px) rotate(${settleRot}deg) scale(${0.82 + pop * 0.18})`,
         marginRight: '0.28em',
         fontSize: big ? 230 : undefined,
         lineHeight: big ? 1 : undefined,
@@ -429,8 +431,16 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
   const textJit = useJitter('text-zone', 1.6);
   const t = frame / fps;
   const segs = sliceSegments(props);
-  const active = segs.find((s, i) => t < (segs[i + 1]?.startSec ?? Infinity)) ?? segs[segs.length - 1];
+  const activeIdx = Math.max(0, segs.findIndex((s, i) => t < (segs[i + 1]?.startSec ?? Infinity)));
+  const active = segs[activeIdx] ?? segs[segs.length - 1];
   const endCard = frame > durationInFrames - fps * 1.4;
+  // beat transition: the outgoing block slides up during the breath gap
+  // before the next beat; the incoming block enters mid-motion (Vox cut)
+  const nextStart = segs[activeIdx + 1]?.startSec ?? null;
+  const exitP = nextStart !== null && t > active.endSec + 0.08
+    ? interpolate(t, [active.endSec + 0.08, Math.max(nextStart, active.endSec + 0.3)], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
+    : 0;
+  const enterP = interpolate(frame - active.startSec * fps, [0, 7], [0.45, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
   const highlightSet = new Set(
     (active?.highlights ?? []).flatMap((h) => h.toLowerCase().split(/\s+/)),
@@ -456,7 +466,8 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
             position: 'absolute', left: 84, right: 84,
             top: active.image ? 1080 : active.ransom ? 980 : 0, bottom: 170,
             display: 'flex', flexDirection: 'column', justifyContent: active.image || active.ransom ? 'flex-start' : 'center',
-            transform: `translate(${textJit.x}px, ${textJit.y}px)`,
+            transform: `translate(${textJit.x}px, ${textJit.y + (1 - enterP) * 90 - exitP * 110}px)`,
+            opacity: 1 - exitP,
           }}
         >
           <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', fontSize: active.big ? 84 : active.image ? 72 : 96, lineHeight: 1.14, letterSpacing: -2, color: INK}}>
