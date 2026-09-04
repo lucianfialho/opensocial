@@ -107,7 +107,7 @@ export async function narrateContinuous(eventId, fullText, apiKey) {
   mkdirSync(join(root, 'public', 'audio'), {recursive: true});
   const voice = voiceFor(eventId);
   const hash = createHash('md5')
-    .update(`v4|${MODEL}|${voice.id}|${SPEED}|${TEMPO}|${fullText}`)
+    .update(`v5|${MODEL}|${voice.id}|${SPEED}|${TEMPO}|${PRONUNCIATION_DICTIONARY.version_id}|${fullText}`)
     .digest('hex')
     .slice(0, 8);
   const rel = `audio/news-${eventId}-full-${hash}.mp3`;
