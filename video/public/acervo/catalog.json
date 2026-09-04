@@ -1,0 +1,790 @@
+[
+  {
+    "arquivo": "prop-01.png",
+    "nome": "mapa-digital",
+    "descricao": "Um mapa do mundo com um visual de pixels digitais.",
+    "conceitos": [
+      "global",
+      "ia",
+      "midia",
+      "velocidade",
+      "dados"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-03.png",
+    "nome": "letra-b-halftone",
+    "descricao": "Uma letra 'B' estilizada com efeito halftone, com contorno grosso e um visual retrô.",
+    "conceitos": [
+      "midia",
+      "visual",
+      "design",
+      "marca"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-06.png",
+    "nome": "copo-gelado",
+    "descricao": "Um copo de bebida gelada com limão e canudo.",
+    "conceitos": [
+      "midia",
+      "velocidade",
+      "viral"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-07.png",
+    "nome": "cao-latindo",
+    "descricao": "Um cachorro feroz rosnando, pronto para atacar.",
+    "conceitos": [
+      "seguranca",
+      "privacidade",
+      "polemica",
+      "midia",
+      "alerta"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-08.png",
+    "nome": "letra-a-pop-art",
+    "descricao": "Uma letra 'A' em estilo pop art com efeito de halftones, ideal para destacar temas relacionados à Inteligência Artificial.",
+    "conceitos": [
+      "ia",
+      "tecnologia",
+      "midia",
+      "viral"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-09.png",
+    "nome": "karma-estouro",
+    "descricao": "Um balão de fala de HQ em forma de estrela com a palavra \"KARMA!\" em letras grossas e pontilhadas.",
+    "conceitos": [
+      "polemica",
+      "viral",
+      "midia",
+      "falha"
+    ],
+    "energia": "alerta",
+    "texto": "KARMA!",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-10.png",
+    "nome": "jornal-noticias-pixelado",
+    "descricao": "Um jornal pixelado representando as notícias de tecnologia e IA.",
+    "conceitos": [
+      "ia",
+      "tech",
+      "midia",
+      "viral",
+      "informacao"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-11.png",
+    "nome": "trofeu-ia",
+    "descricao": "Um troféu em estilo halftone retratando o sucesso e as conquistas no campo da inteligência artificial.",
+    "conceitos": [
+      "ia",
+      "dinheiro",
+      "velocidade",
+      "esperanca",
+      "acordo"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-12.png",
+    "nome": "polegar-para-baixo",
+    "descricao": "Sinal de desaprovação ou falha.",
+    "conceitos": [
+      "falha",
+      "polemica",
+      "seguranca",
+      "vazamento",
+      "negativo"
+    ],
+    "energia": "negativa",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-13.png",
+    "nome": "aura-positiva",
+    "descricao": "Um sticker de pixel art que indica uma aura positiva, talvez relacionada a IA ou tecnologia.",
+    "conceitos": [
+      "ia",
+      "viral",
+      "midia",
+      "positiva"
+    ],
+    "energia": "positiva",
+    "texto": "+999 AURA",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-14.png",
+    "nome": "mao-rock",
+    "descricao": "Sinal de rock 'n' roll para expressar excitação ou aprovação em notícias de IA/tech.",
+    "conceitos": [
+      "viral",
+      "midia",
+      "inovacao",
+      "progresso",
+      "tecnologia",
+      "ia"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-15.png",
+    "nome": "boca-aberta-gritando",
+    "descricao": "Uma boca aberta em um grito ou fala intensa, com dentes visíveis, estilizada com pontos.",
+    "conceitos": [
+      "polemica",
+      "viral",
+      "midia",
+      "velocidade",
+      "vazamento"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-16.png",
+    "nome": "pilha-dinheiro-pixel",
+    "descricao": "Uma pilha de dinheiro pixelada, com notas dobradas e um senso de volume.",
+    "conceitos": [
+      "dinheiro",
+      "ia",
+      "investimento",
+      "lucro",
+      "startup"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-17.png",
+    "nome": "maos-celular",
+    "descricao": "Mãos segurando um celular, pronto para capturar ou compartilhar.",
+    "conceitos": [
+      "midia",
+      "viral",
+      "privacidade",
+      "noticias"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-18.png",
+    "nome": "chave-png",
+    "descricao": "Uma chave simples estilizada como um PNG, ideal para temas de acesso e segurança.",
+    "conceitos": [
+      "seguranca",
+      "acesso",
+      "privacidade",
+      "controle",
+      "desbloqueio",
+      "tech"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-19.png",
+    "nome": "computador-retro",
+    "descricao": "Um computador de estilo retro com efeito de semitono.",
+    "conceitos": [
+      "ia",
+      "tecnologia",
+      "inovação",
+      "futuro",
+      "retrospectiva"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-20.png",
+    "nome": "aperto-de-mao-dotado",
+    "descricao": "Um aperto de mão estilizado em pontos, simbolizando um acordo ou parceria.",
+    "conceitos": [
+      "acordo",
+      "parceria",
+      "negocios",
+      "tecnologia",
+      "confianca"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-21.png",
+    "nome": "passaporte-digital",
+    "descricao": "Identidade digital de IA para viagens",
+    "conceitos": [
+      "ia",
+      "privacidade",
+      "seguranca",
+      "viral",
+      "midia"
+    ],
+    "energia": "neutra",
+    "texto": "Passaporte Digital",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-23.png",
+    "nome": "cartao-vermelho-ia",
+    "descricao": "Um cartão vermelho levantado em pixel art, simbolizando uma punição ou advertência.",
+    "conceitos": [
+      "polemica",
+      "falha",
+      "alerta",
+      "midia",
+      "seguranca"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-24.png",
+    "nome": "maos-rezando",
+    "descricao": "Mãos juntas em oração, simbolizando esperança ou súplica.",
+    "conceitos": [
+      "esperanca",
+      "polemica",
+      "acordo",
+      "viral",
+      "midia"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-26.png",
+    "nome": "bateria-carregada",
+    "descricao": "O futuro da energia e da tecnologia impulsionado pela IA.",
+    "conceitos": [
+      "ia",
+      "dinheiro",
+      "velocidade",
+      "esperanca"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-27.png",
+    "nome": "protocolo-seguro",
+    "descricao": "Indica uma conexão de internet segura.",
+    "conceitos": [
+      "seguranca",
+      "privacidade",
+      "midia",
+      "internet",
+      "tecnologia"
+    ],
+    "energia": "neutra",
+    "texto": "https://",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-28.png",
+    "nome": "rex-digital",
+    "descricao": "Um T-Rex sorridente, representando a nova era da tecnologia de IA.",
+    "conceitos": [
+      "ia",
+      "tecnologia",
+      "futuro",
+      "inovacao",
+      "viral"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-29.png",
+    "nome": "globo-desenho",
+    "descricao": "Um globo terrestre estilizado com um padrão de meio-tom. ",
+    "conceitos": [
+      "tecnologia",
+      "inovacao",
+      "global",
+      "dados",
+      "futuro",
+      "conexao"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-30.png",
+    "nome": "tudo-vai-ficar-ok",
+    "descricao": "Uma afirmação tranquilizadora em meio à incerteza.",
+    "conceitos": [
+      "esperanca",
+      "velocidade",
+      "viral",
+      "midia",
+      "neutra"
+    ],
+    "energia": "positiva",
+    "texto": "Everything will be OK?",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-31.png",
+    "nome": "oculos-pretos",
+    "descricao": "Um par de óculos de sol pretos em um estilo pixelado.",
+    "conceitos": [
+      "midia",
+      "viral",
+      "privacidade",
+      "seguranca"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-32.png",
+    "nome": "apple- halftone",
+    "descricao": "Uma maçã em halftone para representar a tecnologia e inovação.",
+    "conceitos": [
+      "ia",
+      "midia",
+      "velocidade",
+      "dinheiro"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "marca"
+  },
+  {
+    "arquivo": "prop-33.png",
+    "nome": "pilha-de-livros",
+    "descricao": "Um monte de livros em preto e branco, representando conhecimento e informação.",
+    "conceitos": [
+      "ia",
+      "midia",
+      "informacao",
+      "conhecimento",
+      "tecnologia"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-34.png",
+    "nome": "cafe-tech",
+    "descricao": "Uma xícara de café estilizada em meio a pontilhismo, perfeita para representar pausas ou momentos de reflexão em discussões sobre tecnologia e IA.",
+    "conceitos": [
+      "ia",
+      "tech",
+      "inovacao",
+      "futuro",
+      "reflexao"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-35.png",
+    "nome": "lapiz-esferoide",
+    "descricao": "Uma representação abstrata de um lápis ou caneta em meio a um cenário tecnológico.",
+    "conceitos": [
+      "ia",
+      "midia",
+      "escrita",
+      "criacao",
+      "tecnologia",
+      "inovacao"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-36.png",
+    "nome": "pizza-ai",
+    "descricao": "Uma fatia de pizza estilizada em pixel art, representando a criatividade e as novas formas de consumo de conteúdo geradas por IA.",
+    "conceitos": [
+      "ia",
+      "midia",
+      "viral",
+      "criatividade",
+      "digital"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-37.png",
+    "nome": "terra-ia",
+    "descricao": "A inteligência artificial expandindo seu alcance global.",
+    "conceitos": [
+      "ia",
+      "global",
+      "tecnologia",
+      "futuro",
+      "inovacao",
+      "conexao"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-38.png",
+    "nome": "dedos-do-meio",
+    "descricao": "Uma coleção de dedos do meio em várias posições, todos com um efeito de ponto.",
+    "conceitos": [
+      "polemica",
+      "viral",
+      "midia",
+      "critica",
+      "rejeicao"
+    ],
+    "energia": "negativa",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-39.png",
+    "nome": "coracao-maos-ia",
+    "descricao": "Duas mãos formando um coração, com um efeito de pontilhismo que lembra a renderização de IA.",
+    "conceitos": [
+      "ia",
+      "esperanca",
+      "midia",
+      "viral",
+      "positiva"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-40.png",
+    "nome": "caveira-fones",
+    "descricao": "Uma caveira com fones de ouvido, sugerindo um tema sombrio ou perigoso em notícias de IA/tech.",
+    "conceitos": [
+      "seguranca",
+      "privacidade",
+      "polemica",
+      "alerta",
+      "falha"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-41.png",
+    "nome": "oops-falha",
+    "descricao": "Indica um erro ou deslize inesperado em um desenvolvimento de IA.",
+    "conceitos": [
+      "falha",
+      "vazamento",
+      "polemica",
+      "viral",
+      "ia"
+    ],
+    "energia": "alerta",
+    "texto": "OOPS!",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-42.png",
+    "nome": "explosao-ia",
+    "descricao": "Uma explosão nuclear estilizada em pixel art, representando o impacto ou a falha de tecnologias de IA.",
+    "conceitos": [
+      "falha",
+      "polemica",
+      "alerta",
+      "seguranca",
+      "viral"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-43.png",
+    "nome": "atencao-triangulo",
+    "descricao": "Um símbolo de atenção em formato de triângulo",
+    "conceitos": [
+      "alerta",
+      "polemica",
+      "falha",
+      "seguranca",
+      "risco"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-44.png",
+    "nome": "ouvido-atento",
+    "descricao": "Ouvido estilizado para capturar e processar informações de IA/tech.",
+    "conceitos": [
+      "midia",
+      "seguranca",
+      "privacidade",
+      "ia",
+      "viral"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-45.png",
+    "nome": "cactus-halftone",
+    "descricao": "Um cacto estilizado em halftone para ilustrar notícias de IA e tecnologia.",
+    "conceitos": [
+      "ia",
+      "midia",
+      "viral",
+      "design"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-46.png",
+    "nome": "cobra-enrolada",
+    "descricao": "Uma imagem abstrata de uma cobra enrolada, feita com pontos, sugerindo um tema de perigo ou discrição.",
+    "conceitos": [
+      "polemica",
+      "seguranca",
+      "privacidade",
+      "vazamento",
+      "midia"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-47.png",
+    "nome": "omg-explosao",
+    "descricao": "Uma explosão no estilo de quadrinhos com a sigla 'OMG!' expressando surpresa ou choque.",
+    "conceitos": [
+      "viral",
+      "polemica",
+      "midia",
+      "velocidade",
+      "falha"
+    ],
+    "energia": "alerta",
+    "texto": "OMG!",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-48.png",
+    "nome": "astronauta-halftone",
+    "descricao": "Um astronauta em estilo de meia-tom, evocando exploração e tecnologia. ",
+    "conceitos": [
+      "ia",
+      "tech",
+      "futuro",
+      "exploracao",
+      "inovacao"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-49.png",
+    "nome": "buraco-fechadura-olho",
+    "descricao": "Um olho espreita por um buraco de fechadura, sugerindo vigilância e acesso.",
+    "conceitos": [
+      "privacidade",
+      "seguranca",
+      "vazamento",
+      "midia",
+      "polemica"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-50.png",
+    "nome": "porquinho-cofre",
+    "descricao": "Um cofrinho estilizado em arte pontilhista, pronto para guardar seus ganhos tecnológicos.",
+    "conceitos": [
+      "dinheiro",
+      "investimento",
+      "ia",
+      "lucro",
+      "economia"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-51.png",
+    "nome": "this-is-not-ai",
+    "descricao": "Um adesivo com a frase 'THIS IS NOT AI' em um estilo de fonte distinto e pixelado.",
+    "conceitos": [
+      "ia",
+      "midia",
+      "polemica",
+      "viral",
+      "autenticidade"
+    ],
+    "energia": "alerta",
+    "texto": "\"THIS IS NOT AI\"",
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-52.png",
+    "nome": "tecnologia-complexa",
+    "descricao": "Uma representação visual complexa de dados e interconexões tecnológicas.",
+    "conceitos": [
+      "ia",
+      "tecnologia",
+      "dados",
+      "inovacao",
+      "futuro"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-53.png",
+    "nome": "nota-dolar",
+    "descricao": "Uma nota de dólar de cem dólares com um design pontilhado.",
+    "conceitos": [
+      "dinheiro",
+      "ia",
+      "finanças",
+      "investimento",
+      "tech"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-54.png",
+    "nome": "cadeado-fechado",
+    "descricao": "Um cadeado que representa segurança e proteção.",
+    "conceitos": [
+      "seguranca",
+      "privacidade",
+      "vazamento",
+      "controle"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-55.png",
+    "nome": "mao-escrevendo",
+    "descricao": "Uma mão desenhando ou escrevendo com uma caneta ou pincel.",
+    "conceitos": [
+      "midia",
+      "criatividade",
+      "redacao",
+      "ia",
+      "autoria"
+    ],
+    "energia": "neutra",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-57.png",
+    "nome": "olho-espiando",
+    "descricao": "Um olho que espia através de um rasgo, simbolizando vigilância e privacidade.",
+    "conceitos": [
+      "privacidade",
+      "seguranca",
+      "midia",
+      "vazamento",
+      "polemica"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-58.png",
+    "nome": "mao-shaka",
+    "descricao": "Gesto de shaka com efeito de meio-tom, perfeito para expressar vibes positivas em notícias tech.",
+    "conceitos": [
+      "viral",
+      "midia",
+      "dinheiro",
+      "esperanca",
+      "velocidade"
+    ],
+    "energia": "positiva",
+    "texto": null,
+    "risco": "nenhum"
+  },
+  {
+    "arquivo": "prop-59.png",
+    "nome": "confusao-visual",
+    "descricao": "Um glitch visual que representa dados corrompidos ou caóticos.",
+    "conceitos": [
+      "vazamento",
+      "falha",
+      "polemica",
+      "midia",
+      "ia"
+    ],
+    "energia": "alerta",
+    "texto": null,
+    "risco": "nenhum"
+  }
+]
