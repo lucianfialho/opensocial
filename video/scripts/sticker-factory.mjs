@@ -150,10 +150,12 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
     .toBuffer();
 
   const layers = border > 0 ? [{input: whiteBase}, {input: inked}] : [{input: inked}];
+  // palette quantization (the TinyPNG trick, built into sharp): B&W
+  // halftones collapse to a handful of colors — 5-10x smaller files
   await sharp({create: {width: W, height: H, channels: 4, background: {r: 0, g: 0, b: 0, alpha: 0}}})
     .composite(layers)
     .trim({threshold: 10})
-    .png()
+    .png({palette: true, quality: 80, compressionLevel: 9})
     .toFile(outPath);
   return outPath;
 }
