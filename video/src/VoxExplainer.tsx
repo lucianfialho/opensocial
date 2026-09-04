@@ -282,8 +282,13 @@ const RansomWord: React.FC<{word: string; startSec: number}> = ({word, startSec}
   const {fps} = useVideoConfig();
   const boil = useBoil(8);
   const letters = [...word];
+  // tiles shrink so the whole word fits one line (usable width ~960px)
+  const n = letters.filter((c) => c !== ' ').length;
+  const tileW = Math.min(128, Math.floor((960 - 6 * (n - 1)) / n));
+  const tileH = Math.round(tileW * 1.31);
+  const fontSize = Math.round(tileW * 0.84);
   return (
-    <div style={{position: 'absolute', left: 60, right: 60, top: 0, bottom: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 6, pointerEvents: 'none'}}>
+    <div style={{position: 'absolute', left: 60, right: 60, top: 330, height: 560, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 6, pointerEvents: 'none'}}>
       {letters.map((ch, i) => {
         if (ch === ' ') return <div key={i} style={{width: 46}} />;
         const enter = spring({frame: frame - (startSec + 0.35 + i * 0.1) * fps, fps, config: {damping: 12, stiffness: 220}});
@@ -297,13 +302,13 @@ const RansomWord: React.FC<{word: string; startSec: number}> = ({word, startSec}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               backgroundColor: bg, color: fg,
-              width: 128, height: 168,
+              width: tileW, height: tileH,
               clipPath: `polygon(${tornPoints(`${word}-${i}-${boil}`)})`,
               transform: `rotate(${rot + (1 - enter) * 14}deg) scale(${0.5 + enter * 0.5})`,
               opacity: Math.min(1, enter * 1.5),
               fontFamily: serif ? 'Lora' : 'Inter',
               fontWeight: serif ? (400 as const) : (800 as const),
-              fontSize: 108,
+              fontSize,
               filter: 'drop-shadow(0 8px 16px rgba(20,20,18,0.3))',
             }}
           >
@@ -449,8 +454,8 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
         <div
           style={{
             position: 'absolute', left: 84, right: 84,
-            top: active.image ? 1080 : 0, bottom: 170,
-            display: 'flex', flexDirection: 'column', justifyContent: active.image ? 'flex-start' : 'center',
+            top: active.image ? 1080 : active.ransom ? 980 : 0, bottom: 170,
+            display: 'flex', flexDirection: 'column', justifyContent: active.image || active.ransom ? 'flex-start' : 'center',
             transform: `translate(${textJit.x}px, ${textJit.y}px)`,
           }}
         >
