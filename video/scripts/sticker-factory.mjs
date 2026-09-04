@@ -108,12 +108,16 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
   const rawOpts = {raw: {width: W, height: H, channels: 1}};
   const maskRaw = await sharp(mask).resize(W, H, {fit: 'fill'}).toColourspace('b-w').raw().toBuffer();
   if (maskRaw.length !== W * H) throw new Error(`mask raw ${maskRaw.length} != ${W * H}`);
-  const dilatedRaw = await sharp(maskRaw, rawOpts).blur(border).threshold(24).toColourspace('b-w').raw().toBuffer();
+  const dilatedRaw = border > 0
+    ? await sharp(maskRaw, rawOpts).blur(border).threshold(24).toColourspace('b-w').raw().toBuffer()
+    : maskRaw;
   if (dilatedRaw.length !== W * H) throw new Error(`dilated raw ${dilatedRaw.length} != ${W * H}`);
 
   // torn-paper border: the inner band of the die-cut is solid, the outer
   // ring survives only where chunky deterministic noise says so
-  const midRaw = await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.45)).threshold(24).toColourspace('b-w').raw().toBuffer();
+  const midRaw = border > 0
+    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.45)).threshold(24).toColourspace('b-w').raw().toBuffer()
+    : maskRaw;
   let seedState = 987654321;
   const rand = () => ((seedState = (seedState * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const bs = 6;
@@ -145,8 +149,9 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
     .png()
     .toBuffer();
 
+  const layers = border > 0 ? [{input: whiteBase}, {input: inked}] : [{input: inked}];
   await sharp({create: {width: W, height: H, channels: 4, background: {r: 0, g: 0, b: 0, alpha: 0}}})
-    .composite([{input: whiteBase}, {input: inked}])
+    .composite(layers)
     .trim({threshold: 10})
     .png()
     .toFile(outPath);
