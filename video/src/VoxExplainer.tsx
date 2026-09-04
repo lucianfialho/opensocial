@@ -12,6 +12,7 @@ import {z} from 'zod';
 
 loadFont({family: 'Inter', url: staticFile('fonts/Inter-wght-800.ttf'), weight: '800'});
 loadFont({family: 'Gofar Serif', url: staticFile('fonts/GofarSerif.otf')});
+loadFont({family: 'Lora', url: staticFile('fonts/Lora-ital-wght-0-400.ttf'), weight: '400'});
 
 const CREAM = '#f6f1e0';
 const INK = '#141412';
@@ -32,6 +33,7 @@ export const voxExplainerSchema = z.object({
       arrow: z.boolean().default(false),
       entity: z.object({nome: z.string(), logo: z.string().nullable(), logoW: z.number().optional(), logoH: z.number().optional()}).nullable().default(null),
       prop: z.object({src: z.string(), x: z.number(), y: z.number(), w: z.number(), rot: z.number().default(-4)}).nullable().default(null),
+      ransom: z.string().nullable().default(null),
       image: z.string().nullable().default(null),
       credit: z.string().nullable().default(null),
     }),
@@ -260,6 +262,59 @@ const EntitySticker: React.FC<{
   );
 };
 
+/** Ransom-note word: each letter on its own torn-paper tile, generated —
+ *  no asset, no license, brand palette. Tiles boil and land one by one. */
+const tornPoints = (key: string) => {
+  // 3 jittered points per edge of the tile
+  const j = (k: string, base: number) => base + (random(k) - 0.5) * 7;
+  const pts: string[] = [];
+  for (let i = 0; i <= 3; i++) pts.push(`${j(`${key}-t${i}x`, i * 33.3)}% ${j(`${key}-t${i}y`, 0)}%`);
+  for (let i = 1; i <= 3; i++) pts.push(`${j(`${key}-r${i}x`, 100)}% ${j(`${key}-r${i}y`, i * 33.3)}%`);
+  for (let i = 1; i <= 3; i++) pts.push(`${j(`${key}-b${i}x`, 100 - i * 33.3)}% ${j(`${key}-b${i}y`, 100)}%`);
+  for (let i = 1; i < 3; i++) pts.push(`${j(`${key}-l${i}x`, 0)}% ${j(`${key}-l${i}y`, 100 - i * 33.3)}%`);
+  return pts.join(', ');
+};
+
+const RANSOM_PALETTE: Array<[string, string]> = [[INK, CREAM], [CREAM, INK], [ACCENT, INK], [INK, ACCENT]];
+
+const RansomWord: React.FC<{word: string; startSec: number}> = ({word, startSec}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const boil = useBoil(8);
+  const letters = [...word];
+  return (
+    <div style={{position: 'absolute', left: 60, right: 60, top: 0, bottom: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 6, pointerEvents: 'none'}}>
+      {letters.map((ch, i) => {
+        if (ch === ' ') return <div key={i} style={{width: 46}} />;
+        const enter = spring({frame: frame - (startSec + 0.35 + i * 0.1) * fps, fps, config: {damping: 12, stiffness: 220}});
+        if (frame < (startSec + 0.35 + i * 0.1) * fps) return <div key={i} style={{width: 10}} />;
+        const [bg, fg] = RANSOM_PALETTE[Math.floor(random(`rp-${word}-${i}`) * RANSOM_PALETTE.length)];
+        const rot = (random(`rr-${word}-${i}`) - 0.5) * 11;
+        const serif = random(`rf-${word}-${i}`) > 0.45;
+        return (
+          <div
+            key={i}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: bg, color: fg,
+              width: 128, height: 168,
+              clipPath: `polygon(${tornPoints(`${word}-${i}-${boil}`)})`,
+              transform: `rotate(${rot + (1 - enter) * 14}deg) scale(${0.5 + enter * 0.5})`,
+              opacity: Math.min(1, enter * 1.5),
+              fontFamily: serif ? 'Lora' : 'Inter',
+              fontWeight: serif ? (400 as const) : (800 as const),
+              fontSize: 108,
+              filter: 'drop-shadow(0 8px 16px rgba(20,20,18,0.3))',
+            }}
+          >
+            {ch}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /** Halftone prop from the collage library: slaps in like a cutout. */
 const PropSticker: React.FC<{
   prop: {src: string; x: number; y: number; w: number; rot: number};
@@ -387,6 +442,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
       {active?.image && active.arrow ? <ScribbleArrow startSec={active.startSec} seed={41} /> : null}
       {active?.entity && !endCard ? <EntitySticker entity={active.entity} startSec={active.startSec} onPhoto={Boolean(active.image)} /> : null}
       {active?.prop && !endCard ? <PropSticker prop={active.prop} startSec={active.startSec} /> : null}
+      {active?.ransom && !endCard ? <RansomWord word={active.ransom} startSec={active.startSec} /> : null}
 
       {/* kinetic type zone: lower half when a photo is up, centered otherwise */}
       {active && !endCard ? (

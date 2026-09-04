@@ -16,7 +16,7 @@ const SEGMENTS = [
   {text: 'Bastava saber o seu e-mail. Nada mais.', highlights: ['seu e-mail'], big: null, circle: null, arrow: false, prop: {src: 'vox/prop-lupa.png', x: 640, y: 320, w: 340, rot: 8}, image: null, credit: null},
   {text: '5 mil contas do Dropbox foram invadidas sem que ninguém digitasse uma senha.', highlights: [], big: '5', circle: 'senha', arrow: false, entity: {nome: 'Dropbox', logo: 'vox/logo-dropbox.png'}, prop: {src: 'vox/prop-cadeado.png', x: 660, y: 1240, w: 360, rot: -7}, image: null, credit: null},
   {text: 'A brecha veio de um recurso da Lenovo, que confirmava o login sozinho.', highlights: ['confirmava o login sozinho'], big: null, circle: null, arrow: true, entity: {nome: 'Lenovo', logo: 'vox/logo-lenovo.png', logoW: 140, logoH: 30}, image: 'vox/hero-28012.jpg', credit: 'g1.globo.com'},
-  {text: 'O Dropbox diz que já bloqueou as contas afetadas.', highlights: [], big: null, circle: 'bloqueou', arrow: false, image: null, credit: null},
+  {text: 'O Dropbox diz que já bloqueou as contas afetadas.', highlights: [], big: null, circle: null, arrow: false, ransom: 'BLOQUEADAS', image: null, credit: null},
   {text: 'Mas fica a pergunta: quantos serviços confiam demais no seu e-mail?', highlights: ['confiam demais'], big: null, circle: null, arrow: false, prop: {src: 'vox/prop-camera.png', x: 620, y: 1200, w: 380, rot: -6}, image: null, credit: null},
 ];
 const NARRATION = SEGMENTS.map((s) => s.text).join(' ');
@@ -63,6 +63,6 @@ writeFileSync(propsPath, JSON.stringify(props));
 console.log('renderizando...');
 execFileSync('npx', [
   'remotion', 'render', 'VoxExplainer', join(root, 'out', `vox-${EVENT_ID}.mp4`),
-  `--props=${propsPath}`, '--codec=h264',
+  `--props=${propsPath}`, '--codec=h264', '--timeout=120000',
 ], {cwd: root, stdio: 'inherit'});
 console.log(`pronto: out/vox-${EVENT_ID}.mp4`);
