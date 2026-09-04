@@ -464,7 +464,8 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
   const segs = sliceSegments(props);
   const activeIdx = Math.max(0, segs.findIndex((s, i) => t < (segs[i + 1]?.startSec ?? Infinity)));
   const active = segs[activeIdx] ?? segs[segs.length - 1];
-  const endCard = frame > durationInFrames - fps * 1.4;
+  const endCardStart = durationInFrames - fps * 2.6;
+  const endCard = frame > endCardStart;
   // beat transition: the outgoing block slides up during the breath gap
   // before the next beat; the incoming block enters mid-motion (Vox cut)
   const nextStart = segs[activeIdx + 1]?.startSec ?? null;
@@ -517,12 +518,36 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
         </div>
       ) : null}
 
-      {endCard ? (
-        <AbsoluteFill style={{backgroundColor: INK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
-          <div style={{fontFamily: 'Gofar Serif', fontSize: 110, color: CREAM}}>{props.brand.replace(/\s+/g, '')}</div>
-          <div style={{fontSize: 40, color: ACCENT, marginTop: 18}}>{props.handle}</div>
-        </AbsoluteFill>
-      ) : null}
+      {endCard ? (() => {
+        const ef = frame - endCardStart;
+        const pop1 = spring({frame: ef, fps, config: {damping: 13, stiffness: 200}});
+        const pop2 = spring({frame: ef - 9, fps, config: {damping: 14, stiffness: 200}});
+        const pop3 = spring({frame: ef - 20, fps, config: {damping: 10, stiffness: 210}});
+        const tagline = ['o', 'futuro', 'da', 'IA,', 'todo', 'dia,'];
+        const clique = ['num', 'clique.'];
+        return (
+          <AbsoluteFill style={{backgroundColor: INK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0}}>
+            <div style={{fontFamily: 'Gofar Serif', fontSize: 128, color: CREAM, opacity: pop1, transform: `translateY(${(1 - pop1) * 40}px) scale(${0.9 + pop1 * 0.1})`}}>
+              {props.brand.replace(/\s+/g, '')}
+            </div>
+            <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 12px', marginTop: 34, maxWidth: 760, fontSize: 44, fontWeight: 800, color: CREAM, opacity: pop2, transform: `translateY(${(1 - pop2) * 30}px)`}}>
+              {tagline.map((w, i) => (<span key={i}>{w}</span>))}
+              <span style={{backgroundColor: ACCENT, color: INK, padding: '0 10px'}}>{clique.join(' ')}</span>
+            </div>
+            <div
+              style={{
+                marginTop: 52, background: ACCENT, color: INK, fontWeight: 800, fontSize: 46,
+                padding: '18px 44px', borderRadius: 60, letterSpacing: 1,
+                boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+                opacity: Math.min(1, pop3 * 1.4),
+                transform: `scale(${0.5 + pop3 * 0.5}) rotate(${-6 + pop3 * 4}deg)`,
+              }}
+            >
+              SIGA {props.handle.toUpperCase()}
+            </div>
+          </AbsoluteFill>
+        );
+      })() : null}
 
       <Grain />
       <Flicker />
