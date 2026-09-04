@@ -13,11 +13,11 @@ const EVENT_ID = 28012; // Dropbox: bastava seu e-mail
 // Narration beats: `text` must match the narration word-for-word; the
 // composition re-slices ElevenLabs word timings by whitespace count.
 const SEGMENTS = [
-  {text: 'Bastava saber o seu e-mail. Nada mais.', highlights: ['seu e-mail'], big: null, circle: null, arrow: false, prop: {src: 'vox/prop-lupa.png', x: 640, y: 320, w: 340, rot: 8}, image: null, credit: null},
-  {text: '5 mil contas do Dropbox foram invadidas sem que ninguém digitasse uma senha.', highlights: [], big: '5', circle: 'senha', arrow: false, entity: {nome: 'Dropbox', logo: 'vox/logo-dropbox.png'}, prop: {src: 'vox/prop-cadeado.png', x: 660, y: 1240, w: 360, rot: -7}, image: null, credit: null},
+  {text: 'Bastava saber o seu e-mail. Nada mais.', highlights: ['seu e-mail'], big: null, circle: null, arrow: false, prop: {src: 'vox/prop-olho-fechadura.png', x: 620, y: 300, w: 360, rot: 6}, image: null, credit: null},
+  {text: '5 mil contas do Dropbox foram invadidas sem que ninguém digitasse uma senha.', highlights: [], big: '5', circle: 'senha', arrow: false, entity: {nome: 'Dropbox', logo: 'vox/logo-dropbox.png'}, prop: {src: 'vox/prop-cadeado-acervo.png', x: 660, y: 1240, w: 340, rot: -7}, image: null, credit: null},
   {text: 'A brecha veio de um recurso da Lenovo, que confirmava o login sozinho.', highlights: ['confirmava o login sozinho'], big: null, circle: null, arrow: true, entity: {nome: 'Lenovo', logo: 'vox/logo-lenovo.png', logoW: 140, logoH: 30}, image: 'vox/hero-28012.jpg', credit: 'g1.globo.com'},
   {text: 'O Dropbox diz que já bloqueou as contas afetadas.', highlights: [], big: null, circle: null, arrow: false, ransom: 'BLOQUEADAS', image: null, credit: null},
-  {text: 'Mas fica a pergunta: quantos serviços confiam demais no seu e-mail?', highlights: ['confiam demais'], big: null, circle: null, arrow: false, prop: {src: 'vox/prop-camera.png', x: 620, y: 1200, w: 380, rot: -6}, image: null, credit: null},
+  {text: 'Mas fica a pergunta: quantos serviços confiam demais no seu e-mail?', highlights: ['confiam demais'], big: null, circle: null, arrow: false, prop: {src: 'vox/prop-olho-espiando.png', x: 600, y: 1180, w: 400, rot: -5}, image: null, credit: null},
 ];
 const NARRATION = SEGMENTS.map((s) => s.text).join(' ');
 
