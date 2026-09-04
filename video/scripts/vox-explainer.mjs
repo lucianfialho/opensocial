@@ -39,6 +39,8 @@ const PROMPT = `Você roteiriza um reel explainer (estilo Vox) do "o agêntico",
 
 AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o título reescrito); cada beat acrescenta fato NOVO; números amarrados ao significado; escolha UMA emoção dominante e escreva nela. Clichês banidos: "o futuro está em jogo", "marco histórico", "divisor de águas".
 
+NOME DO PRODUTO: cite o nome exato do produto/modelo da pauta pelo menos uma vez (o público precisa saber do que se fala — e o beat que o apresenta pode usar o cartão-título dele como foto).
+
 REGISTRO DE VOZ: escreva como uma pessoa mandando ÁUDIO NO WHATSAPP pra um amigo — informal, direto, falado ("mano", "olha isso", "pra você ter ideia"), sem tom de locutor e sem formalidade de telejornal. É alguém contando algo que acabou de ver, com a empolgação real de quem conta.
 
 FORMATO: 4 a 6 beats; narração total de 40 a 65 palavras; frases curtas, ritmo de fala, pt-BR.
@@ -47,9 +49,9 @@ Cada beat: {"texto": "frase(s) do beat", "tom": "direção de voz do beat: excit
 
 O "tom" dirige a narração (ElevenLabs v3): varie com o arco — gancho tenso/excited, desenvolvimento serious/curious, revelação dramatic, fechamento emphatic. Use whispers com parcimônia (máx 1).
 
-LIMITES DUROS: máx 1 numeroGigante no roteiro; máx 2 circulos; USE 1 a 2 props (mire em pelo menos 1 — beats sem foto/ransom são candidatos); máx 1 ransom (beat com ransom não leva prop); máx 2 fotos, cada imagem no máximo 1 vez, e beat com foto não leva prop nem ransom.
+LIMITES DUROS: máx 1 numeroGigante no roteiro; máx 2 circulos; USE 1 a 2 props (mire em pelo menos 1 — beats sem foto/ransom são candidatos); máx 1 ransom (beat com ransom não leva prop); até 3 fotos — SEJA GENEROSO: pauta com imagens boas merece 2-3 beats de foto (imagem segura a atenção mais que texto); cada imagem no máximo 1 vez, e beat com foto não leva prop nem ransom.
 
-REGRAS DE OURO DA FOTO: (1) só use se a descrição casa com o texto do beat — sem foto > foto errada; (2) NUNCA use imagem cuja descrição seja só logotipo/marca/wordmark — mostrar logo é papel do sticker de entidade, foto é pra CONTEÚDO (ilustração, produto, cena, gráfico).
+REGRAS DE OURO DA FOTO: (1) só use se a descrição casa com o texto do beat — sem foto > foto errada; (2) logo/título do PRÓPRIO produto ou empresa da pauta pode ilustrar o beat que o apresenta pelo nome; logo de qualquer OUTRA marca nunca entra (foi assim que já erramos uma vez).
 
 CATÁLOGO DE PROPS (nome: conceitos):
 ${menu}
@@ -68,7 +70,7 @@ for (const cand of [
   detail.imagem?.url ? {url: detail.imagem.url, fonte: detail.imagem.fonte ?? 'divulgação'} : null,
   ...(detail.artigos ?? []).map((a) => (a.imageUrl ? {url: a.imageUrl, fonte: a.sourceName ?? 'divulgação'} : null)),
 ].filter(Boolean)) {
-  if (imgSeen.has(cand.url) || imgCands.length >= 4) continue;
+  if (imgSeen.has(cand.url) || imgCands.length >= 6) continue;
   imgSeen.add(cand.url);
   imgCands.push(cand);
 }
@@ -131,8 +133,13 @@ const usedIdx = new Set();
 for (const b of script.beats) {
   const idx = Number.isInteger(b.foto) ? b.foto : null;
   b.foto = null;
-  if (idx == null || !imagens[idx] || usedIdx.has(idx) || usedIdx.size >= 2) continue;
-  if (/logotipo|logomarca|\blogo\b|wordmark/i.test(imagens[idx].descricao)) continue; // logo é papel do sticker
+  if (idx == null || !imagens[idx] || usedIdx.has(idx) || usedIdx.size >= 3) continue;
+  if (/logotipo|logomarca|\blogo\b|letreiro|wordmark/i.test(imagens[idx].descricao)) {
+    // a logo image may only illustrate a beat that names what the logo IS:
+    // some capitalized token from the description must appear in the text
+    const nomes = (imagens[idx].descricao.match(/[A-Z][\w]+/g) ?? []).filter((n) => n.length > 3);
+    if (!nomes.some((n) => b.texto.includes(n))) continue;
+  }
   usedIdx.add(idx);
   const img = imagens[idx];
   const rel = `vox/hero-${id}-${idx}.jpg`;
