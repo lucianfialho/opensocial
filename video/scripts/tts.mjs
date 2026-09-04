@@ -54,7 +54,7 @@ async function tts(text, outPath, apiKey, voice) {
         language_code: 'pt',
         apply_text_normalization: 'on',
         pronunciation_dictionary_locators: [PRONUNCIATION_DICTIONARY],
-        voice_settings: {speed: SPEED, stability: 0.5, similarity_boost: 0.75},
+        voice_settings: {speed: SPEED, stability: Number(envValue('OPENSOCIAL_TTS_STABILITY') ?? 0.5), similarity_boost: 0.75},
       }),
     },
   );

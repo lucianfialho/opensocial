@@ -37,7 +37,9 @@ AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o tí
 
 FORMATO: 4 a 6 beats; narração total de 40 a 65 palavras; frases curtas, ritmo de fala, pt-BR.
 
-Cada beat: {"texto": "frase(s) do beat", "destaques": ["trecho EXATO a marcar de amarelo, máx 4 palavras"], "numeroGigante": "token EXATO do texto que é número forte, ou null", "circulo": "palavra EXATA do texto pra circular à mão, ou null", "foto": true se este beat deve mostrar a foto da notícia, "prop": "nome de um sticker do catálogo abaixo que REFORÇA o beat, ou null", "ransom": "PALAVRA-IMPACTO em caps (≤12 letras) pra aparecer em letras de recorte, ou null"}
+Cada beat: {"texto": "frase(s) do beat", "tom": "direção de voz do beat: excited | serious | curious | whispers | emphatic | dramatic", "destaques": ["trecho EXATO a marcar de amarelo, máx 4 palavras"], "numeroGigante": "token EXATO do texto que é número forte, ou null", "circulo": "palavra EXATA do texto pra circular à mão, ou null", "foto": true se este beat deve mostrar a foto da notícia, "prop": "nome de um sticker do catálogo abaixo que REFORÇA o beat, ou null", "ransom": "PALAVRA-IMPACTO em caps (≤12 letras) pra aparecer em letras de recorte, ou null"}
+
+O "tom" dirige a narração (ElevenLabs v3): varie com o arco — gancho tenso/excited, desenvolvimento serious/curious, revelação dramatic, fechamento emphatic. Use whispers com parcimônia (máx 1).
 
 LIMITES DUROS: máx 1 numeroGigante no roteiro; máx 2 circulos; máx 2 props (só quando reforçam de verdade); máx 1 ransom; máx 1 foto (e beat com foto não leva prop nem ransom).
 
@@ -141,12 +143,20 @@ if (entity) {
   segments[idx >= 0 ? idx : Math.min(1, segments.length - 1)].entity = entity;
 }
 
-// narration: real TTS when the quota allows, synthetic timing otherwise
+// narration: real TTS when the quota allows, synthetic timing otherwise.
+// v3 audio tags carry the per-beat voice direction; they are consumed by
+// the model, and their tokens are filtered out of the word timeline so
+// beat slicing by word count stays exact.
+const TOM_OK = new Set(['excited', 'serious', 'curious', 'whispers', 'emphatic', 'dramatic']);
 const NARRATION = script.beats.map((b) => b.texto).join(' ');
+const TAGGED = script.beats
+  .map((b) => (TOM_OK.has(b.tom) ? `[${b.tom}] ` : '') + b.texto)
+  .join(' ');
 let clip;
 try {
-  clip = await narrateContinuous(id, NARRATION, envValue('ELEVENLABS_API_KEY'));
-  log('narração: ElevenLabs (timing por palavra)');
+  clip = await narrateContinuous(id, TAGGED, envValue('ELEVENLABS_API_KEY'));
+  clip.words = clip.words.filter((w) => !/^\[.+\]$/.test(w.text));
+  log('narração: ElevenLabs v3 dirigida (timing por palavra)');
 } catch (err) {
   log(`tts indisponível (${String(err).slice(0, 60)}) — timing sintético, sem áudio`);
   const tokens = NARRATION.split(/\s+/).filter(Boolean);
