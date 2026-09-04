@@ -97,9 +97,14 @@ if (mode === 'claims') {
     TAGS,
   ].join('\n');
 } else {
-  // LLM scriptwriter first (needs ANTHROPIC_API_KEY); mechanical fallback
+  // LLM scriptwriter, and ONLY the scriptwriter: the mechanical fallback
+  // published walls of overflowing text during gateway outages — an ugly
+  // post costs more than a missing one, so no script means no carousel
   const {writeCarouselScript} = await import('./carousel-writer.mjs');
   const script = await writeCarouselScript(story, detail, articleImages);
+  if (!script) {
+    throw new Error('sem roteiro LLM (gateway fora?) — carrossel não sai no modo mecânico');
+  }
   if (script) {
     const usedImages = new Set();
     let essayCount = 0;
