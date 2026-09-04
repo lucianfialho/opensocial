@@ -43,11 +43,13 @@ REGISTRO DE VOZ: escreva como uma pessoa mandando ÁUDIO NO WHATSAPP pra um amig
 
 FORMATO: 4 a 6 beats; narração total de 40 a 65 palavras; frases curtas, ritmo de fala, pt-BR.
 
-Cada beat: {"texto": "frase(s) do beat", "tom": "direção de voz do beat: excited | serious | curious | whispers | emphatic | dramatic", "destaques": ["trecho EXATO a marcar de amarelo, máx 4 palavras"], "numeroGigante": "token EXATO do texto que é número forte, ou null", "circulo": "palavra EXATA do texto pra circular à mão, ou null", "prop": "nome de um sticker do catálogo abaixo que REFORÇA o beat, ou null", "ransom": "PALAVRA-IMPACTO em caps (≤12 letras) pra aparecer em letras de recorte, ou null"}
+Cada beat: {"texto": "frase(s) do beat", "tom": "direção de voz do beat: excited | serious | curious | whispers | emphatic | dramatic", "foto": índice de uma imagem de imagensDisponiveis cuja descrição COMBINA com o texto deste beat, ou null, "destaques": ["trecho EXATO a marcar de amarelo, máx 4 palavras"], "numeroGigante": "token EXATO do texto que é número forte, ou null", "circulo": "palavra EXATA do texto pra circular à mão, ou null", "prop": "nome de um sticker do catálogo abaixo que REFORÇA o beat, ou null", "ransom": "PALAVRA-IMPACTO em caps (≤12 letras) pra aparecer em letras de recorte, ou null"}
 
 O "tom" dirige a narração (ElevenLabs v3): varie com o arco — gancho tenso/excited, desenvolvimento serious/curious, revelação dramatic, fechamento emphatic. Use whispers com parcimônia (máx 1).
 
-LIMITES DUROS: máx 1 numeroGigante no roteiro; máx 2 circulos; máx 2 props (só quando reforçam de verdade); máx 1 ransom (beat com ransom não leva prop).
+LIMITES DUROS: máx 1 numeroGigante no roteiro; máx 2 circulos; USE 1 a 2 props (mire em pelo menos 1 — beats sem foto/ransom são candidatos); máx 1 ransom (beat com ransom não leva prop); máx 2 fotos, cada imagem no máximo 1 vez, e beat com foto não leva prop nem ransom.
+
+REGRAS DE OURO DA FOTO: (1) só use se a descrição casa com o texto do beat — sem foto > foto errada; (2) NUNCA use imagem cuja descrição seja só logotipo/marca/wordmark — mostrar logo é papel do sticker de entidade, foto é pra CONTEÚDO (ilustração, produto, cena, gráfico).
 
 CATÁLOGO DE PROPS (nome: conceitos):
 ${menu}
@@ -57,19 +59,50 @@ caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags).
 Responda SÓ JSON:
 {"beats": [...], "caption": "..."}`;
 
-const synthesis = {titulo: detail.title, resumo: detail.summary, fatos: (detail.claims ?? []).map((c) => c.texto).slice(0, 8)};
+// all candidate images, vision-described: the writer may stage a photo
+// ONLY on a beat whose text matches the description (wrong photo under
+// the wrong sentence is the one unforgivable edit)
+const imgSeen = new Set();
+const imgCands = [];
+for (const cand of [
+  detail.imagem?.url ? {url: detail.imagem.url, fonte: detail.imagem.fonte ?? 'divulgação'} : null,
+  ...(detail.artigos ?? []).map((a) => (a.imageUrl ? {url: a.imageUrl, fonte: a.sourceName ?? 'divulgação'} : null)),
+].filter(Boolean)) {
+  if (imgSeen.has(cand.url) || imgCands.length >= 4) continue;
+  imgSeen.add(cand.url);
+  imgCands.push(cand);
+}
+const imagens = [];
+for (const [i, cand] of imgCands.entries()) {
+  try {
+    const small = await sharp(Buffer.from(await (await fetch(cand.url)).arrayBuffer())).resize(384, 384, {fit: 'inside'}).jpeg({quality: 75}).toBuffer();
+    const vtext = await chatCompletion({
+      model: 'google/gemini-2.5-flash-lite',
+      max_tokens: 200,
+      messages: [{role: 'user', content: [
+        {type: 'text', text: 'Descreva a imagem em 1 frase objetiva (o que/quem aparece, marcas visíveis). Responda SÓ JSON: {"descricao": "..."}'},
+        {type: 'image_url', image_url: {url: 'data:image/jpeg;base64,' + small.toString('base64')}},
+      ]}],
+    });
+    imagens.push({...cand, indice: i, descricao: parseJsonBlock(vtext).descricao ?? '(sem descrição)'});
+    log(`imagem ${i}: ${imagens.at(-1).descricao.slice(0, 70)}`);
+  } catch {}
+}
+
+const synthesis = {titulo: detail.title, resumo: detail.summary, fatos: (detail.claims ?? []).map((c) => c.texto).slice(0, 8), imagensDisponiveis: imagens.map((m) => ({indice: m.indice, descricao: m.descricao}))};
 
 let script = null;
 for (let attempt = 1; attempt <= 2 && !script; attempt++) {
   try {
     const text = await chatCompletion({
       model: MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [
         {role: 'system', content: PROMPT},
         {role: 'user', content: JSON.stringify(synthesis)},
       ],
     });
+    globalThis.__lastRaw = text;
     const out = parseJsonBlock(text);
     if (!Array.isArray(out.beats) || out.beats.length < 3) throw new Error('beats insuficientes');
     const words = out.beats.map((b) => b.texto).join(' ').split(/\s+/).filter(Boolean);
@@ -85,17 +118,29 @@ for (let attempt = 1; attempt <= 2 && !script; attempt++) {
     script = out;
   } catch (err) {
     log(`roteiro inválido (${String(err).slice(0, 90)}) — tentativa ${attempt}`);
+    if (globalThis.__lastRaw) writeFileSync(join(root, 'out', `vox-${id}.raw-${attempt}.txt`), globalThis.__lastRaw);
   }
 }
 if (!script) throw new Error('sem roteiro válido');
 log(`roteiro: ${script.beats.length} beats (${MODEL})`);
 
-// no event photos in this format: the wrong photo under the wrong beat
-// costs more credibility than any photo adds
+// download only the images the writer actually staged
 mkdirSync(join(root, 'public', 'vox'), {recursive: true});
-const heroRel = null;
-const heroCredit = null;
-for (const b of script.beats) b.foto = false;
+const fotoByIndice = new Map();
+const usedIdx = new Set();
+for (const b of script.beats) {
+  const idx = Number.isInteger(b.foto) ? b.foto : null;
+  b.foto = null;
+  if (idx == null || !imagens[idx] || usedIdx.has(idx) || usedIdx.size >= 2) continue;
+  if (/logotipo|logomarca|\blogo\b|wordmark/i.test(imagens[idx].descricao)) continue; // logo é papel do sticker
+  usedIdx.add(idx);
+  const img = imagens[idx];
+  const rel = `vox/hero-${id}-${idx}.jpg`;
+  const buf = Buffer.from(await (await fetch(img.url)).arrayBuffer());
+  await sharp(buf).resize(1200, 900, {fit: 'cover'}).jpeg({quality: 88}).toFile(join(root, 'public', rel));
+  fotoByIndice.set(idx, {rel, fonte: img.fonte});
+  b.foto = idx;
+}
 
 // entity sticker: the event's anchor company, logo from the entity bank
 let entity = null;
@@ -123,12 +168,12 @@ const segments = script.beats.map((b) => {
     highlights: (b.destaques ?? []).slice(0, 2),
     big: b.numeroGigante ?? null,
     circle: b.circulo ?? null,
-    arrow: Boolean(b.foto),
+    arrow: b.foto != null,
     entity: null,
     prop: null,
     ransom: b.ransom ? String(b.ransom).toUpperCase().slice(0, 12) : null,
-    image: b.foto ? heroRel : null,
-    credit: b.foto ? heroCredit : null,
+    image: b.foto != null ? fotoByIndice.get(b.foto).rel : null,
+    credit: b.foto != null ? fotoByIndice.get(b.foto).fonte : null,
   };
   if (b.prop && !b.foto && !b.ransom) {
     const alto = propCount % 2 === 0;
