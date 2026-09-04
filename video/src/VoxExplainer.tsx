@@ -5,7 +5,7 @@ import {loadFont} from '@remotion/fonts';
 import React, {useMemo} from 'react';
 import rough from 'roughjs';
 import {
-  AbsoluteFill, Audio, Img, interpolate, random, spring, staticFile,
+  AbsoluteFill, Audio, Img, interpolate, random, Sequence, spring, staticFile,
   useCurrentFrame, useVideoConfig,
 } from 'remotion';
 import {z} from 'zod';
@@ -425,6 +425,37 @@ const PhotoMoment: React.FC<{seg: Seg}> = ({seg}) => {
   );
 };
 
+/** SFX track: every visual event fires its sound at the known timestamp. */
+const SfxTrack: React.FC<{segs: Seg[]; fps: number}> = ({segs, fps}) => {
+  const cues: {src: string; at: number; vol: number}[] = [];
+  const clean = (w: string) => w.toLowerCase().replace(/[^a-z0-9\u00c0-\u00ff]/g, '');
+  for (const [i, seg] of segs.entries()) {
+    if (i > 0) cues.push({src: 'sfx/whoosh.mp3', at: seg.startSec - 0.12, vol: 0.4});
+    if (seg.image) cues.push({src: 'sfx/baque.mp3', at: seg.startSec + 0.15, vol: 0.55});
+    if (seg.prop) cues.push({src: 'sfx/pop.mp3', at: seg.startSec + 0.55, vol: 0.6});
+    if (seg.entity) cues.push({src: 'sfx/pop.mp3', at: seg.startSec + (seg.image ? 0.9 : 0.35), vol: 0.55});
+    if (seg.ransom) cues.push({src: 'sfx/rasgo.mp3', at: seg.startSec + 0.35, vol: 0.6});
+    if (seg.arrow) cues.push({src: 'sfx/rabisco.mp3', at: seg.startSec + 0.5, vol: 0.5});
+    if (seg.big) {
+      const w = seg.words.find((x) => clean(x.text) === clean(seg.big ?? ''));
+      if (w) cues.push({src: 'sfx/stab.mp3', at: w.start, vol: 0.6});
+    }
+    if (seg.circle) {
+      const w = seg.words.find((x) => clean(x.text) === clean(seg.circle ?? ''));
+      if (w) cues.push({src: 'sfx/rabisco.mp3', at: w.start + 0.15, vol: 0.5});
+    }
+  }
+  return (
+    <>
+      {cues.map((c, i) => (
+        <Sequence key={i} from={Math.max(0, Math.round(c.at * fps))} durationInFrames={40}>
+          <Audio src={staticFile(c.src)} volume={c.vol} />
+        </Sequence>
+      ))}
+    </>
+  );
+};
+
 export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
   const frame = useCurrentFrame();
   const {fps, durationInFrames} = useVideoConfig();
@@ -450,6 +481,7 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
   return (
     <AbsoluteFill style={{backgroundColor: CREAM, fontFamily: 'Inter', fontWeight: 800 as const}}>
       {props.audioSrc !== 'none' ? <Audio src={staticFile(props.audioSrc)} /> : null}
+      <SfxTrack segs={segs} fps={fps} />
       <SketchGround />
       <Masthead brand={props.brand} />
 

@@ -35,13 +35,15 @@ const PROMPT = `Você roteiriza um reel explainer (estilo Vox) do "o agêntico",
 
 AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o título reescrito); cada beat acrescenta fato NOVO; números amarrados ao significado; escolha UMA emoção dominante e escreva nela. Clichês banidos: "o futuro está em jogo", "marco histórico", "divisor de águas".
 
+REGISTRO DE VOZ: escreva como uma pessoa mandando ÁUDIO NO WHATSAPP pra um amigo — informal, direto, falado ("mano", "olha isso", "pra você ter ideia"), sem tom de locutor e sem formalidade de telejornal. É alguém contando algo que acabou de ver, com a empolgação real de quem conta.
+
 FORMATO: 4 a 6 beats; narração total de 40 a 65 palavras; frases curtas, ritmo de fala, pt-BR.
 
-Cada beat: {"texto": "frase(s) do beat", "tom": "direção de voz do beat: excited | serious | curious | whispers | emphatic | dramatic", "destaques": ["trecho EXATO a marcar de amarelo, máx 4 palavras"], "numeroGigante": "token EXATO do texto que é número forte, ou null", "circulo": "palavra EXATA do texto pra circular à mão, ou null", "foto": true se este beat deve mostrar a foto da notícia, "prop": "nome de um sticker do catálogo abaixo que REFORÇA o beat, ou null", "ransom": "PALAVRA-IMPACTO em caps (≤12 letras) pra aparecer em letras de recorte, ou null"}
+Cada beat: {"texto": "frase(s) do beat", "tom": "direção de voz do beat: excited | serious | curious | whispers | emphatic | dramatic", "destaques": ["trecho EXATO a marcar de amarelo, máx 4 palavras"], "numeroGigante": "token EXATO do texto que é número forte, ou null", "circulo": "palavra EXATA do texto pra circular à mão, ou null", "prop": "nome de um sticker do catálogo abaixo que REFORÇA o beat, ou null", "ransom": "PALAVRA-IMPACTO em caps (≤12 letras) pra aparecer em letras de recorte, ou null"}
 
 O "tom" dirige a narração (ElevenLabs v3): varie com o arco — gancho tenso/excited, desenvolvimento serious/curious, revelação dramatic, fechamento emphatic. Use whispers com parcimônia (máx 1).
 
-LIMITES DUROS: máx 1 numeroGigante no roteiro; máx 2 circulos; máx 2 props (só quando reforçam de verdade); máx 1 ransom; máx 1 foto (e beat com foto não leva prop nem ransom).
+LIMITES DUROS: máx 1 numeroGigante no roteiro; máx 2 circulos; máx 2 props (só quando reforçam de verdade); máx 1 ransom (beat com ransom não leva prop).
 
 CATÁLOGO DE PROPS (nome: conceitos):
 ${menu}
@@ -84,18 +86,12 @@ for (let attempt = 1; attempt <= 2 && !script; attempt++) {
 if (!script) throw new Error('sem roteiro válido');
 log(`roteiro: ${script.beats.length} beats (${MODEL})`);
 
-// hero image (photo beat) — landscape-safe, local for staticFile
+// no event photos in this format: the wrong photo under the wrong beat
+// costs more credibility than any photo adds
 mkdirSync(join(root, 'public', 'vox'), {recursive: true});
-const heroUrl = detail.imagem?.url ?? detail.artigos?.find((a) => a.imageUrl)?.imageUrl ?? null;
-let heroRel = null;
-if (heroUrl && script.beats.some((b) => b.foto)) {
-  const buf = Buffer.from(await (await fetch(heroUrl)).arrayBuffer());
-  heroRel = `vox/hero-${id}.jpg`;
-  await sharp(buf).resize(1200, 900, {fit: 'cover'}).jpeg({quality: 88}).toFile(join(root, 'public', heroRel));
-} else {
-  for (const b of script.beats) b.foto = false; // sem imagem, sem beat de foto
-}
-const heroCredit = detail.imagem?.fonte ?? detail.artigos?.find((a) => a.imageUrl)?.sourceName ?? 'divulgação';
+const heroRel = null;
+const heroCredit = null;
+for (const b of script.beats) b.foto = false;
 
 // entity sticker: the event's anchor company, logo from the entity bank
 let entity = null;
@@ -151,7 +147,7 @@ const TOM_OK = new Set(['excited', 'serious', 'curious', 'whispers', 'emphatic',
 const NARRATION = script.beats.map((b) => b.texto).join(' ');
 const TAGGED = script.beats
   .map((b) => (TOM_OK.has(b.tom) ? `[${b.tom}] ` : '') + b.texto)
-  .join(' ');
+  .join(' ') + ' [casual] Isso foi o agêntico. Segue a gente.';
 let clip;
 try {
   clip = await narrateContinuous(id, TAGGED, envValue('ELEVENLABS_API_KEY'));
