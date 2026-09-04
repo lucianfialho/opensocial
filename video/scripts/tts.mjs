@@ -22,10 +22,11 @@ const REPORTERS = [
   {id: 'cyD08lEy76q03ER1jZ7y', name: 'Scheila', pose: 'lJO2JNagv9'},
   {id: 'RGymW84CSmfVugnA5tvA', name: 'Roberta', pose: 'vQFjkHka47'},
 ];
-const PRONUNCIATION_DICTIONARY = {
-  pronunciation_dictionary_id: 'OtVajeC5RdDnSY4sMZgk',
-  version_id: '3lWnwTlUpbZqEKD0LuFK',
-};
+// pinned by scripts/sync-pronuncia.mjs (edit pronuncia.json, run the sync)
+const lockPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'pronuncia.lock.json');
+const PRONUNCIATION_DICTIONARY = existsSync(lockPath)
+  ? JSON.parse(readFileSync(lockPath, 'utf8'))
+  : {pronunciation_dictionary_id: 'OtVajeC5RdDnSY4sMZgk', version_id: '3lWnwTlUpbZqEKD0LuFK'};
 
 export const envValue = (name) => {
   if (process.env[name]) return process.env[name];
