@@ -109,8 +109,32 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
   // everything below works on VERIFIED single-channel raw buffers — sharp's
   // dest-in reads the input's alpha, so the mask must BE an alpha channel
   const rawOpts = {raw: {width: W, height: H, channels: 1}};
-  const maskRaw = await sharp(mask).resize(W, H, {fit: 'fill'}).toColourspace('b-w').raw().toBuffer();
+  let maskRaw = await sharp(mask).resize(W, H, {fit: 'fill'}).toColourspace('b-w').raw().toBuffer();
   if (maskRaw.length !== W * H) throw new Error(`mask raw ${maskRaw.length} != ${W * H}`);
+
+  // photo cut off at the bottom edge (busts on socles, cropped shots): shave
+  // the flat-cut pedestal — walk up while rows stay wide, cap at 16% height
+  const rowCover = (y) => {
+    let n = 0;
+    for (let x = 0; x < W; x++) if (maskRaw[y * W + x] > 128) n++;
+    return n;
+  };
+  if (rowCover(H - 2) > W * 0.06) {
+    let maxCover = 0;
+    for (let y = 0; y < H; y += 4) maxCover = Math.max(maxCover, rowCover(y));
+    const cap = Math.floor(H * 0.84);
+    let cutY = H;
+    for (let y = H - 1; y >= cap; y--) {
+      if (rowCover(y) < maxCover * 0.55) { cutY = y; break; }
+      cutY = y;
+    }
+    if (cutY < H) {
+      const shaved = Buffer.from(maskRaw);
+      shaved.fill(0, cutY * W);
+      // re-soften the cut so the torn border wraps it organically
+      maskRaw = await sharp(shaved, rawOpts).blur(3).threshold(110).toColourspace('b-w').raw().toBuffer();
+    }
+  }
   const dilatedRaw = border > 0
     ? await sharp(maskRaw, rawOpts).blur(border).threshold(24).toColourspace('b-w').raw().toBuffer()
     : maskRaw;
@@ -135,12 +159,12 @@ export async function makeSticker(inputBuf, outPath, opts = {}) {
     return sharp(torn, rawOpts).blur(3.2).threshold(128).toColourspace('b-w').raw().toBuffer();
   };
   const midRaw = border > 0
-    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.5)).threshold(24).toColourspace('b-w').raw().toBuffer()
+    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.65)).threshold(24).toColourspace('b-w').raw().toBuffer()
     : maskRaw;
   const tornRaw = border > 0 ? await tornEdge(dilatedRaw, midRaw, 11, 987654321) : maskRaw;
   // the black backing layer between white paper and halftone — the punch
   const inkFullRaw = border > 0
-    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.42)).threshold(24).toColourspace('b-w').raw().toBuffer()
+    ? await sharp(maskRaw, rawOpts).blur(Math.max(2, border * 0.22)).threshold(24).toColourspace('b-w').raw().toBuffer()
     : maskRaw;
   const inkTornRaw = border > 0 ? await tornEdge(inkFullRaw, maskRaw, 7, 246813579) : null;
 
