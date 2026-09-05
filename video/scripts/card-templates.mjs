@@ -143,8 +143,13 @@ export const templates = {
   // aspect (no crop, no scrim over the subject); headline gets its own zone
   titleBand: (card) => {
     const ratio = card.image?.ratio ?? 1.5;
-    const bandH = Math.min(760, Math.round(1080 / ratio));
+    // the bottom-anchored text block grows upward — estimate its height and
+    // cap the band so a long headline never invades the photo
+    const size = fitHeadline(card.headline);
+    const lines = Math.ceil((card.headline.length * 0.52 * size) / 912);
+    const textH = lines * size * 1.04 + (card.subtitle ? 150 : 0) + (card.entity ? 100 : 0) + 90;
     const bandTop = 176;
+    const bandH = Math.min(760, Math.round(1080 / ratio), 1350 - 104 - Math.round(textH) - bandTop - 40);
     return shell(
       '#101013',
       masthead(card.brand, 'white'),
