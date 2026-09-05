@@ -51,9 +51,8 @@ export async function renderCard(card, outPath) {
   if (card.image?.url) {
     const {uri, ratio} = await toDataUri(card.image.url);
     resolved.image = {...card.image, dataUri: uri, ratio};
-    if (ratio >= BAND_RATIO && (card.variant === 'title' || card.variant === 'body')) {
-      resolved.variant = card.variant === 'title' ? 'titleBand' : 'bodyBand';
-    }
+    // band layout retired for now (user verdict: crops and weak contrast) —
+    // fullbleed + scrim is the cover again; templates stay for future use
   }
   const variant = resolved.variant === 'body' && !resolved.image ? 'cream' : resolved.variant;
   const template = templates[variant] ?? templates.body;
