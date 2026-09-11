@@ -91,7 +91,7 @@ async function handle(text) {
       await notify(`✍️ Escrevendo o roteiro de #${eid}... (~1 min)`);
       try {
         execFileSync('node', ['scripts/vox-explainer.mjs', `--id=${eid}`, '--collage', '--dry'],
-          {cwd: root, encoding: 'utf8', timeout: 10 * 60_000, env: process.env});
+          {cwd: root, stdio: ['ignore', 'inherit', 'inherit'], timeout: 10 * 60_000, env: process.env});
         await notify(formatScript(eid));
       } catch (err) {
         await notify(`❌ roteiro falhou: ${String(err.message).slice(0, 200)}`);
@@ -104,8 +104,11 @@ async function handle(text) {
       try {
         const args = ['scripts/vox-explainer.mjs', `--id=${eid}`];
         if (collage) args.push('--collage');
-        execFileSync('node', args, {cwd: root, encoding: 'utf8', timeout: 20 * 60_000, env: process.env});
-        const {loadConfig, createMediaHost} = await import(join(root, '..', 'core', 'dist', 'index.js'));
+        // stdio inherit: remotion's progress flood would overflow a captured
+        // buffer and kill the daemon mid-render
+        execFileSync('node', args, {cwd: root, stdio: ['ignore', 'inherit', 'inherit'], timeout: 25 * 60_000, env: process.env});
+        log(`render #${eid} concluído, enviando link`);
+        const {loadConfig, createMediaHost} = await import(`file://${join(root, '..', 'core', 'dist', 'index.js')}`);
         const host = createMediaHost(loadConfig().mediaHost);
         const {url} = await host.upload(collage ? vidPath : vidPathK);
         await notify(`▶️ #${eid} pronto:\n${url}\n\nResponda "publica-reel ${eid}" pra subir, ou "roteiro ${eid}" pra refazer.`);
