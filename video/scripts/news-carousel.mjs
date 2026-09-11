@@ -105,6 +105,24 @@ if (mode === 'claims') {
   if (!script) {
     throw new Error('sem roteiro LLM (gateway fora?) — carrossel não sai no modo mecânico');
   }
+  // collage posters: cover always, photo cards when the writer asked for one
+  const {generatePoster} = await import('./collage-posters.mjs');
+  const posterFor = new Map();
+  const posterImage = async (key, spec) => {
+    const rel = await generatePoster(`carousel-${story.id}`, key, {scene: spec.cena, headline: null, bg: spec.bg});
+    return {url: `local:${join(root, 'public', rel)}`, credit: 'Foto: ilustração o agêntico'};
+  };
+  let coverPoster = null;
+  if (script.cover?.poster?.cena) {
+    try { coverPoster = await posterImage('cover', script.cover.poster); console.log('pôster: capa'); }
+    catch (err) { console.error(`pôster capa falhou: ${String(err).slice(0, 60)}`); }
+  }
+  for (const [i, c] of script.cards.entries()) {
+    if (c.style !== 'photo' || !c.poster?.cena) continue;
+    if (Number.isInteger(c.imageIndex) && articleImages[c.imageIndex]) continue; // real photo wins
+    try { posterFor.set(c, await posterImage(`card${i}`, c.poster)); console.log(`pôster: card ${i + 1}`); }
+    catch (err) { console.error(`pôster card ${i + 1} falhou: ${String(err).slice(0, 60)}`); }
+  }
   if (script) {
     const usedImages = new Set();
     let essayCount = 0;
@@ -128,6 +146,9 @@ if (mode === 'claims') {
         usedImages.add(c.imageIndex);
         return {...common, variant: 'body', image: articleImages[c.imageIndex]};
       }
+      if (c.style === 'photo' && c.poster?.cena && posterFor.has(c)) {
+        return {...common, variant: 'body', image: posterFor.get(c)};
+      }
       // cream: any body text the writer produced becomes the context intro
       const intro = clean(c.intro) || (c.paragraphs ?? []).map(clean).join(' ');
       return {...common, variant: 'body', intro: intro || undefined, image: null};
@@ -137,6 +158,7 @@ if (mode === 'claims') {
       headline: script.cover.headline,
       highlights: script.cover.accent ? [script.cover.accent] : [],
       subtitle: script.cover.subtitle,
+      ...(coverPoster ? {image: coverPoster} : {}),
     };
   } else {
     const sentences = splitSentences(detail.summary ?? '').slice(0, 3);

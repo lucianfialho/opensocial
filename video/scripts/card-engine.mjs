@@ -25,9 +25,15 @@ const imageCache = new Map();
  *  Returns {uri, ratio} — the ratio decides fullbleed vs band layout. */
 async function toDataUri(url) {
   if (imageCache.has(url)) return imageCache.get(url);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`imagem ${res.status}: ${url}`);
-  const buf = Buffer.from(await res.arrayBuffer());
+  let buf;
+  if (url.startsWith('local:')) {
+    // generated posters live on disk — no fetch needed
+    buf = readFileSync(url.slice(6));
+  } else {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`imagem ${res.status}: ${url}`);
+    buf = Buffer.from(await res.arrayBuffer());
+  }
   const meta = await sharp(buf).metadata();
   const jpeg = await sharp(buf)
     .resize(1080, 1350, {fit: 'outside', withoutEnlargement: true})

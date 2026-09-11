@@ -28,12 +28,13 @@ FORMATO:
 - Estilos de card do miolo: "photo" (frase forte, vai sobre foto), "essay" (headline + 2-3 parágrafos curtos + closer em negrito), "cream" (respiro: parágrafo de contexto + afirmação forte)
 - Use "essay" para o desenvolvimento (o porquê importa), "photo" para fatos de impacto, "cream" no máximo 1x
 - Se houver "imagens" no input: cada card "photo" DEVE indicar "imageIndex" (o índice da imagem escolhida). REGRA DURA: imagem com pessoa_identificavel=true só pode ilustrar card cujo texto cite essa pessoa pelo nome; nunca associe o rosto de alguém a fato que não é sobre essa pessoa. Sem imagem pertinente e segura? Use "essay" ou "cream". Nunca repita imageIndex
+- PÔSTER DE COLAGEM: a capa SEMPRE traz "poster": {"cena": "3-5 peças recortadas descritas em inglês, objetos/figuras concretos da notícia (ex.: 'a halftone cutout of a scientist in a lab coat, a red virus illustration, a torn newspaper strip'), SEM texto na cena, SEM logos de empresas reais", "bg": "cream|ink|yellow"}. Cards "photo" podem trazer "poster" no lugar de "imageIndex" quando não houver imagem real pertinente e segura — pôster gerado é sempre melhor que foto errada.
 - Nunca invente fato que não esteja na síntese; números sempre preservados
 - caption: legenda completa do post (gancho + resumo em 2-3 linhas + "Apuração: N veículos independentes." + CTA "Siga @oagentico" + 4 hashtags)
 
 Responda SÓ com JSON válido:
-{"cover": {"headline": "...", "accent": "...", "subtitle": "..."},
- "cards": [{"style": "photo|essay|cream", "kicker": "...", "headline": "...", "accent": "...", "paragraphs": ["..."], "closer": "...", "intro": "..."}],
+{"cover": {"headline": "...", "accent": "...", "subtitle": "...", "poster": {"cena": "...", "bg": "..."}},
+ "cards": [{"style": "photo|essay|cream", "kicker": "...", "headline": "...", "accent": "...", "paragraphs": ["..."], "closer": "...", "intro": "...", "imageIndex": 0, "poster": {"cena": "...", "bg": "..."}}],
  "caption": "..."}`;
 
 export async function writeCarouselScript(story, detail, images = []) {
