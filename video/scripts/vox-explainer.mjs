@@ -50,7 +50,16 @@ AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o tí
 
 NOME DO PRODUTO: cite o nome exato do produto/modelo da pauta pelo menos uma vez (o público precisa saber do que se fala — e o beat que o apresenta pode usar o cartão-título dele como foto).
 
-REGISTRO DE VOZ — jornalístico SEMPRE. Repórter contando a história a um amigo inteligente: direto, falado, frases curtas, ritmo de conversa — mas ZERO gíria ("mano", "cara", "olha isso", "na cara dura" são PROIBIDOS), zero emoji, zero tom de stories. Declare em "registro" no topo do JSON:
+REGISTRO DE VOZ — REPORTAGEM. O roteiro é uma matéria de telejornal ou podcast de notícias, não uma conversa. Estrutura obrigatória, um beat por função:
+1. LIDE: o fato principal com quem/o quê/onde — sem opinião. Ex.: "A Apple apresentou nesta terça o iPhone Duo, seu primeiro dobrável, e usou o palco para criticar os concorrentes."
+2. A CITAÇÃO: a fala literal de uma fonte nomeada, com atribuição. Ex.: "O CEO John Ternus afirmou que os rivais 'parecem dois celulares colados de forma estranha'."
+3. O CONTRAPONTO: o fato que contradiz ou complica, com a fonte. Ex.: "A documentação do iOS 27.1, encontrada pelo 9to5Mac, mostra que apps não atualizados exibem as mesmas barras pretas no Duo."
+4. O CONTEXTO: número, histórico ou comparação que dimensiona. Ex.: "O Android oferece esse ajuste desde 2021 — o Instagram ganhou versão para tablets Android antes do iPad."
+5. O DESDOBRAMENTO: o que fica em aberto ou a consequência — frase de fechamento sóbria, sem moral da história. Ex.: "A Apple ainda não comentou o caso."
+Verbos de imprensa: apresentou, afirmou, criticou, mostrou, confirmou, negou, admitiu. PROIBIDO: gíria e coloquialismo ("mano", "zoou", "tirou sarro", "na cara dura", "olha isso", "tipo", "btw"), anglicismo inventado ("letterboxar"), emoji, reticências, interjeição, humor de meme, frase de efeito moralizante ("nem a Apple escapa"), pergunta retórica no fechamento.
+FONTES CITÁVEIS: pessoas nomeadas com cargo, veículos de imprensa, documentos oficiais. Comentário anônimo de fórum ou rede social NÃO é fonte: no máximo "usuários criticaram o peso", sem aspas.
+
+Declare em "registro" no topo do JSON:
 - "sinistro" (pauta grave: armas, vigilância, vazamento, morte, crime, abuso): tensão contida, fatos secos que assustam por si, pense em documentário investigativo.
 - "editorial" (todo o resto: produto, empresa, política, curiosidade, recorde): analítico e vivo, ironia fina permitida, empolgação contida — nunca infantil.
 Em ambos: falado, não escrito; nunca tom de locutor de telejornal.
@@ -70,7 +79,7 @@ ${menu}
 
 ${collage ? `MODO COLAGEM: cada beat ganha também "poster": {"cena": "3-5 peças recortadas descritas em inglês, cada uma um objeto/figura concreto (ex.: 'a halftone cutout of a scientist in a lab coat, a torn newspaper strip, a virus illustration, a red stamp'), SEM texto na cena", "manchete": "1-3 palavras em CAPS pt-BR que resumem o beat (vai impressa no pôster)", "bg": "cream|ink|yellow — varie entre beats, ink pro momento mais pesado"}. Nesse modo NÃO use foto nem prop (o pôster é a imagem).` : ''}
 
-caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags). SEM emoji.
+caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags). SEM emoji, SEM reticências, mesmo registro de imprensa.
 
 Responda SÓ JSON:
 {"registro": "sinistro|editorial", "garimpo": ["pepita 1", "pepita 2", "..."], "beats": [{"texto": "...", "tom": "...", ${collage ? '"poster": {"cena": "...", "manchete": "...", "bg": "..."}, ' : ''}...}], "caption": "..."}${collage ? '\nOBRIGATÓRIO no modo colagem: TODO beat tem "poster" preenchido.' : ''}`;
@@ -150,8 +159,11 @@ for (let attempt = 1; attempt <= 3 && !script; attempt++) {
     }
     const words = out.beats.map((b) => b.texto).join(' ').split(/\s+/).filter(Boolean);
     if (words.length < 30 || words.length > 80) throw new Error(`narração com ${words.length} palavras`);
-    const gate = checkCopy({headline: out.beats[0].texto.slice(0, 100), caption: out.caption});
+    const gate = checkCopy({headline: out.beats[0].texto.slice(0, 100), caption: `${out.caption} ${out.beats.map((b) => b.texto).join(' ')}`});
     if (!gate.ok) throw new Error(`trava de qualidade: ${gate.motivo}`);
+    if (/\b(um|uma|outro|outra) (usu[áa]rio|internauta|pessoa|comentarista)\b/i.test(out.beats.map((b) => b.texto).join(' '))) {
+      throw new Error('beat cita comentário anônimo de fórum');
+    }
     for (const b of out.beats) {
       if (b.prop && !byName.has(b.prop)) b.prop = null; // pick inexistente: descarta
       for (const key of ['numeroGigante', 'circulo']) {

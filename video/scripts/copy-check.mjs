@@ -6,6 +6,8 @@ const FOREIGN = /[一-鿿぀-ヿ가-힯Ѐ-ӿ؀-ۿ]/;
 const DESCRIPTIVE = /^v[íi]deo\b|^assista\b|^veja o v[íi]deo/i;
 
 /** Returns {ok, motivo}. Checks headline and (optionally) caption. */
+const SLANG = /\b(mano|zoou|zoar|zoa|tirou sarro|na cara dura|beleza|tipo assim|galera|véi|mó|pra caramba|foda|puta|btw|letterboxar|nem .{1,20} escapa)\b/i;
+
 export function checkCopy({headline, caption}) {
   const h = (headline ?? '').trim();
   if (!h) return {ok: false, motivo: 'manchete vazia'};
@@ -15,5 +17,7 @@ export function checkCopy({headline, caption}) {
   if (h === h.toUpperCase() && h.length > 20) return {ok: false, motivo: 'manchete toda em caixa alta'};
   const c = (caption ?? '').trim();
   if (c && FOREIGN.test(c)) return {ok: false, motivo: 'caption em idioma estrangeiro'};
+  const slang = `${h} ${c}`.match(SLANG);
+  if (slang) return {ok: false, motivo: `gíria fora do registro ("${slang[0]}")`};
   return {ok: true, motivo: null};
 }
