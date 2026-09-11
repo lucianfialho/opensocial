@@ -40,7 +40,11 @@ const menu = catalog.map((c) => `${c.nome}: ${(c.conceitos ?? []).join(', ')}`).
 
 const PROMPT = `Você roteiriza um reel explainer (estilo Vox) do "o agêntico", veículo brasileiro de notícias de IA/tech. Converta a síntese em BEATS de narração com elementos visuais.
 
-MATÉRIA-PRIMA: além da síntese, o input traz "fontes" — o texto das matérias originais. É DALI que saem os números exatos, as citações entre aspas, os nomes e o contexto que fazem um explainer valer a pena. Garimpe: o dado mais surpreendente das fontes lidera o beat 1. Regra dura: nenhum fato que não esteja na síntese ou nas fontes.
+MATÉRIA-PRIMA: além da síntese, o input traz "fontes" — o texto das matérias originais. A síntese é só o mapa; o vídeo é feito DAS FONTES.
+
+MÉTODO OBRIGATÓRIO (faça antes de escrever): liste em "garimpo" 4-6 pepitas extraídas das fontes que NÃO estão na síntese — citações literais entre aspas (quem disse, palavras exatas), números com unidade, nomes de produtos/apps/pessoas, comparações concretas, datas. Depois escreva os beats de modo que PELO MENOS 3 pepitas apareçam literalmente no roteiro. Beat que só reescreve a síntese com outras palavras é PROIBIDO — cada beat traz um fato que o leitor não sabia. Sem pepita suficiente nas fontes? Faça menos beats.
+
+Regra dura: nenhum fato fora da síntese ou das fontes.
 
 AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o título reescrito); cada beat acrescenta fato NOVO; números amarrados ao significado; escolha UMA emoção dominante e escreva nela. Clichês banidos: "o futuro está em jogo", "marco histórico", "divisor de águas".
 
@@ -69,7 +73,7 @@ ${collage ? `MODO COLAGEM: cada beat ganha também "poster": {"cena": "3-5 peça
 caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags). SEM emoji.
 
 Responda SÓ JSON:
-{"registro": "sinistro|editorial", "beats": [{"texto": "...", "tom": "...", ${collage ? '"poster": {"cena": "...", "manchete": "...", "bg": "..."}, ' : ''}...}], "caption": "..."}${collage ? '\nOBRIGATÓRIO no modo colagem: TODO beat tem "poster" preenchido.' : ''}`;
+{"registro": "sinistro|editorial", "garimpo": ["pepita 1", "pepita 2", "..."], "beats": [{"texto": "...", "tom": "...", ${collage ? '"poster": {"cena": "...", "manchete": "...", "bg": "..."}, ' : ''}...}], "caption": "..."}${collage ? '\nOBRIGATÓRIO no modo colagem: TODO beat tem "poster" preenchido.' : ''}`;
 
 // all candidate images, vision-described: the writer may stage a photo
 // ONLY on a beat whose text matches the description (wrong photo under
@@ -112,7 +116,7 @@ const synthesis = {
 };
 
 let script = null;
-for (let attempt = 1; attempt <= 2 && !script; attempt++) {
+for (let attempt = 1; attempt <= 3 && !script; attempt++) {
   try {
     const text = await chatCompletion({
       model: MODEL,
@@ -127,6 +131,23 @@ for (let attempt = 1; attempt <= 2 && !script; attempt++) {
     writeFileSync(join(root, 'out', `vox-${id}.prompt.txt`), PROMPT);
     const out = parseJsonBlock(text);
     if (!Array.isArray(out.beats) || out.beats.length < 3) throw new Error('beats insuficientes');
+    if (fontes.length > 0) {
+      const pepitas = Array.isArray(out.garimpo) ? out.garimpo : [];
+      if (pepitas.length < 3) throw new Error('garimpo insuficiente (fontes ignoradas)');
+      // at least one beat must carry a distinctive token from a nugget
+      // (a number or a capitalized name) — proof the sources were used
+      const allText = out.beats.map((b) => b.texto).join(' ');
+      const tokens = pepitas.flatMap((n) => String(n).match(/\d[\d.,]*|[A-Z][a-zA-Z]{3,}/g) ?? []);
+      const used = tokens.filter((t) => allText.includes(t));
+      if (used.length < 2) throw new Error(`pepitas não usadas nos beats (${used.length})`);
+    }
+    // anti-filler: two beats sharing most of their content words = rewrite
+    const bag = (t) => new Set(t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').split(/\s+/).filter((w) => w.length > 4));
+    for (let i = 0; i < out.beats.length; i++) for (let j = i + 1; j < out.beats.length; j++) {
+      const a = bag(out.beats[i].texto), b = bag(out.beats[j].texto);
+      const inter = [...a].filter((w) => b.has(w)).length;
+      if (a.size > 3 && inter / Math.min(a.size, b.size) > 0.6) throw new Error(`beats ${i + 1} e ${j + 1} repetem o mesmo conteúdo`);
+    }
     const words = out.beats.map((b) => b.texto).join(' ').split(/\s+/).filter(Boolean);
     if (words.length < 30 || words.length > 80) throw new Error(`narração com ${words.length} palavras`);
     const gate = checkCopy({headline: out.beats[0].texto.slice(0, 100), caption: out.caption});
