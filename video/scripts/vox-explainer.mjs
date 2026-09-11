@@ -11,6 +11,7 @@ import {envValue, narrateContinuous} from './tts.mjs';
 import {chatCompletion, parseJsonBlock} from './llm.mjs';
 import {checkCopy} from './copy-check.mjs';
 import {visualEntities} from './entities.mjs';
+import {generatePoster} from './collage-posters.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // explainer voice: Raquel (conversational pt-BR) at expressive stability,
@@ -23,6 +24,7 @@ const FPS = 30;
 
 const id = Number(process.argv.find((a) => a.startsWith('--id='))?.split('=')[1]);
 const dry = process.argv.includes('--dry');
+const collage = process.argv.includes('--collage');
 if (!id) throw new Error('use --id=<eventId>');
 const log = (m) => console.log(`[vox ${new Date().toISOString()}] ${m}`);
 
@@ -60,10 +62,12 @@ REGRAS DE OURO DA FOTO: (1) só use se a descrição casa com o texto do beat �
 CATÁLOGO DE PROPS (nome: conceitos):
 ${menu}
 
+${collage ? `MODO COLAGEM: cada beat ganha também "poster": {"cena": "3-5 peças recortadas descritas em inglês, cada uma um objeto/figura concreto (ex.: 'a halftone cutout of a scientist in a lab coat, a torn newspaper strip, a virus illustration, a red stamp'), SEM texto na cena", "manchete": "1-3 palavras em CAPS pt-BR que resumem o beat (vai impressa no pôster)", "bg": "cream|ink|yellow — varie entre beats, ink pro momento mais pesado"}. Nesse modo NÃO use foto nem prop (o pôster é a imagem).` : ''}
+
 caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags).
 
 Responda SÓ JSON:
-{"registro": "zap|sinistro|editorial", "beats": [...], "caption": "..."}`;
+{"registro": "zap|sinistro|editorial", "beats": [{"texto": "...", "tom": "...", ${collage ? '"poster": {"cena": "...", "manchete": "...", "bg": "..."}, ' : ''}...}], "caption": "..."}${collage ? '\nOBRIGATÓRIO no modo colagem: TODO beat tem "poster" preenchido.' : ''}`;
 
 // all candidate images, vision-described: the writer may stage a photo
 // ONLY on a beat whose text matches the description (wrong photo under
@@ -109,6 +113,8 @@ for (let attempt = 1; attempt <= 2 && !script; attempt++) {
       ],
     });
     globalThis.__lastRaw = text;
+    writeFileSync(join(root, 'out', `vox-${id}.raw.txt`), text);
+    writeFileSync(join(root, 'out', `vox-${id}.prompt.txt`), PROMPT);
     const out = parseJsonBlock(text);
     if (!Array.isArray(out.beats) || out.beats.length < 3) throw new Error('beats insuficientes');
     const words = out.beats.map((b) => b.texto).join(' ').split(/\s+/).filter(Boolean);
@@ -171,10 +177,27 @@ if (anchor?.tipo === 'empresa' && anchor.imagem?.url) {
   entity = {nome: anchor.nome, logo: null};
 }
 
+// collage mode: one poster per beat (cached by prompt hash)
+const posterByBeat = new Map();
+if (collage) {
+  for (const [i, b] of script.beats.entries()) {
+    if (!b.poster?.cena) continue;
+    try {
+      const rel = await generatePoster(id, i, {scene: b.poster.cena, headline: b.poster.manchete, bg: b.poster.bg});
+      posterByBeat.set(i, rel);
+      log(`pôster ${i + 1}: "${b.poster.manchete}" (${b.poster.bg})`);
+    } catch (err) {
+      log(`pôster ${i + 1} falhou: ${String(err).slice(0, 60)}`);
+    }
+    b.foto = null; b.prop = null; // poster owns the frame
+  }
+}
+
 // beats → component segments (prop placement alternates free corners)
 let propCount = 0;
-const segments = script.beats.map((b) => {
+const segments = script.beats.map((b, bi) => {
   const seg = {
+    poster: posterByBeat.get(bi) ?? null,
     text: b.texto,
     highlights: (b.destaques ?? []).slice(0, 2),
     big: b.numeroGigante ?? null,
@@ -239,7 +262,8 @@ const props = {
   segments,
 };
 mkdirSync(join(root, 'out'), {recursive: true});
-const propsPath = join(root, 'out', `vox-${id}.props.json`);
+const suffix = collage ? '-collage' : '';
+const propsPath = join(root, 'out', `vox-${id}${suffix}.props.json`);
 writeFileSync(propsPath, JSON.stringify(props, null, 2));
 writeFileSync(join(root, 'out', `vox-${id}.caption.txt`), script.caption);
 
@@ -269,7 +293,7 @@ if (dry) {
 }
 log('renderizando...');
 execFileSync('npx', [
-  'remotion', 'render', 'VoxExplainer', join(root, 'out', `vox-${id}.mp4`),
+  'remotion', 'render', 'VoxExplainer', join(root, 'out', `vox-${id}${suffix}.mp4`),
   `--props=${propsPath}`, '--codec=h264', '--timeout=120000',
 ], {cwd: root, stdio: 'inherit'});
-log(`pronto: out/vox-${id}.mp4 (caption em out/vox-${id}.caption.txt)`);
+log(`pronto: out/vox-${id}${suffix}.mp4 (caption em out/vox-${id}.caption.txt)`);

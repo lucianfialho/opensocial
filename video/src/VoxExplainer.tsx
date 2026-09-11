@@ -37,6 +37,7 @@ export const voxExplainerSchema = z.object({
       ransom: z.string().nullable().default(null),
       image: z.string().nullable().default(null),
       credit: z.string().nullable().default(null),
+      poster: z.string().nullable().default(null),
     }),
   ),
 });
@@ -347,8 +348,40 @@ const PropSticker: React.FC<{
   );
 };
 
-const Masthead: React.FC<{brand: string}> = ({brand}) => (
-  <div style={{position: 'absolute', top: 84, left: 0, right: 0, display: 'flex', justifyContent: 'center', fontFamily: 'Gofar Serif', fontSize: 64, color: INK}}>
+/** Collage mode: the AI poster fills the frame with a slow camera move
+ *  (varied per beat, static on the payoff), cut in mid-motion. */
+const CAMERA = ['push_in', 'pan_left', 'pull_out', 'pan_right', 'push_in', 'static'] as const;
+const PosterBeat: React.FC<{seg: Seg; idx: number; isLast: boolean}> = ({seg, idx, isLast}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const t = (frame - seg.startSec * fps) / fps;
+  const dur = Math.max(1, seg.endSec - seg.startSec + 0.4);
+  const p = Math.min(1, Math.max(0, t / dur));
+  const move = isLast ? 'static' : CAMERA[idx % CAMERA.length];
+  const jit = useJitter(`poster-${idx}`, 1.6, 6);
+  const enter = spring({frame: frame - seg.startSec * fps, fps, config: {damping: 18, stiffness: 120}});
+  let scale = 1.06, tx = 0, ty = 0;
+  if (move === 'push_in') scale = 1.04 + p * 0.1;
+  else if (move === 'pull_out') scale = 1.16 - p * 0.1;
+  else if (move === 'pan_left') { scale = 1.12; tx = 30 - p * 60; }
+  else if (move === 'pan_right') { scale = 1.12; tx = -30 + p * 60; }
+  if (!seg.poster) return null;
+  return (
+    <AbsoluteFill style={{opacity: Math.min(1, enter * 1.6)}}>
+      <Img
+        src={staticFile(seg.poster)}
+        style={{
+          width: '100%', height: '100%', objectFit: 'cover',
+          transform: `translate(${tx + jit.x}px, ${ty + jit.y}px) scale(${scale})`,
+          transformOrigin: 'center',
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+const Masthead: React.FC<{brand: string; light?: boolean}> = ({brand, light = false}) => (
+  <div style={{position: 'absolute', top: 84, left: 0, right: 0, display: 'flex', justifyContent: 'center', fontFamily: 'Gofar Serif', fontSize: 64, color: light ? CREAM : INK, textShadow: light ? '0 2px 12px rgba(0,0,0,0.5)' : undefined}}>
     {brand.replace(/\s+/g, '')}
   </div>
 );
@@ -487,8 +520,13 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
       {props.audioSrc !== 'none' ? <Audio src={staticFile(props.audioSrc)} /> : null}
       {props.musicSrc ? <Audio src={staticFile(props.musicSrc)} volume={0.12} loop /> : null}
       <SfxTrack segs={segs} fps={fps} />
-      <SketchGround />
-      <Masthead brand={props.brand} />
+      {active?.poster && !endCard
+        ? <PosterBeat seg={active} idx={activeIdx} isLast={activeIdx === segs.length - 1} />
+        : <SketchGround />}
+      {active?.poster && !endCard
+        ? <AbsoluteFill style={{background: 'linear-gradient(180deg, rgba(20,20,18,0) 55%, rgba(20,20,18,0.82) 78%, rgba(20,20,18,0.94) 100%)', pointerEvents: 'none'}} />
+        : null}
+      <Masthead brand={props.brand} light={Boolean(active?.poster)} />
 
       {active?.image ? <PhotoMoment seg={active} /> : null}
       {active?.image && active.arrow ? <ScribbleArrow startSec={active.startSec} seed={41} /> : null}
@@ -501,13 +539,13 @@ export const VoxExplainer: React.FC<VoxExplainerProps> = (props) => {
         <div
           style={{
             position: 'absolute', left: 84, right: 84,
-            top: active.image ? 1080 : active.ransom ? 980 : 0, bottom: 170,
-            display: 'flex', flexDirection: 'column', justifyContent: active.image || active.ransom ? 'flex-start' : 'center',
+            top: active.poster ? 1230 : active.image ? 1080 : active.ransom ? 980 : 0, bottom: 170,
+            display: 'flex', flexDirection: 'column', justifyContent: active.image || active.ransom || active.poster ? 'flex-start' : 'center',
             transform: `translate(${textJit.x}px, ${textJit.y + (1 - enterP) * 90 - exitP * 110}px)`,
             opacity: 1 - exitP,
           }}
         >
-          <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', fontSize: active.big ? 84 : active.image ? 72 : 96, lineHeight: 1.14, letterSpacing: -2, color: INK}}>
+          <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', fontSize: active.poster ? 64 : active.big ? 84 : active.image ? 72 : 96, lineHeight: 1.14, letterSpacing: -2, color: active.poster ? CREAM : INK}}>
             {active.words.map((w, i) => (
               <KineticWord
                 key={`${active.text}-${i}`}
