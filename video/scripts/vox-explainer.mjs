@@ -177,9 +177,10 @@ if (anchor?.tipo === 'empresa' && anchor.imagem?.url) {
   entity = {nome: anchor.nome, logo: null};
 }
 
-// collage mode: one poster per beat (cached by prompt hash)
+// collage mode: one poster per beat (cached by prompt hash). Skipped on
+// --dry: the approval gate must cost nothing beyond the script itself.
 const posterByBeat = new Map();
-if (collage) {
+if (collage && !dry) {
   for (const [i, b] of script.beats.entries()) {
     if (!b.poster?.cena) continue;
     try {
@@ -233,6 +234,7 @@ const TAGGED = script.beats
   .join(' ') + (script.registro === 'zap' ? ' [casual] Isso foi o agêntico. Segue a gente.' : ' [serious] Isso foi o agêntico. Siga pra acompanhar.');
 let clip;
 try {
+  if (dry) throw new Error('dry run: sem TTS');
   clip = await narrateContinuous(id, TAGGED, envValue('ELEVENLABS_API_KEY'));
   clip.words = clip.words.filter((w) => !/^\[.+\]$/.test(w.text));
   log('narração: ElevenLabs v3 dirigida (timing por palavra)');

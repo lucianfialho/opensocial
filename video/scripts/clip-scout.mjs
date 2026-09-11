@@ -11,6 +11,8 @@ import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {judgeEvent, searchYouTube, searchTavily, searchRadarX, searchNasaVideos, judgeRadarFind, canDownload, notify} from './clip-scout-lib.mjs';
 import {checkCopy} from './copy-check.mjs';
+import {judgeHeat} from './heat-judge.mjs';
+import {execFileSync} from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API = 'https://oagentico.com.br/api/v1';
@@ -151,6 +153,32 @@ for (const find of nasaFinds) {
   });
   nasaCount += 1;
   log(`nasa: CANDIDATO #${nasaId} — ${screen.headline}`);
+}
+
+// ---- EXPLAINER GATE: só pauta MUITO quente (>= 9) vira sugestão de reel,
+// e nunca sem passar o roteiro pelo humano — nada renderiza sozinho ----
+const HOT = Number(envValue('OPENSOCIAL_REEL_HEAT_MIN') ?? 9);
+for (const event of dados.slice(0, top)) {
+  const key = `reel:${event.id}`;
+  if (seen[key]) continue;
+  let heat;
+  try {
+    const detail = await (await fetch(`${API}/eventos/${event.id}`, {headers: {Authorization: `Bearer ${token}`}})).json();
+    heat = await judgeHeat(event, detail.dados?.summary ?? '');
+  } catch { continue; }
+  seen[key] = new Date().toISOString();
+  if (heat.nota < HOT) continue;
+  log(`🔥 pauta ${heat.nota}/10 (#${event.id}) — escrevendo roteiro pro gate`);
+  try {
+    execFileSync('node', ['scripts/vox-explainer.mjs', `--id=${event.id}`, '--collage', '--dry'],
+      {cwd: root, encoding: 'utf8', timeout: 10 * 60_000, env: process.env});
+    const p = JSON.parse(readFileSync(join(root, 'out', `vox-${event.id}-collage.props.json`), 'utf8'));
+    const cap = readFileSync(join(root, 'out', `vox-${event.id}.caption.txt`), 'utf8').split('\n')[0];
+    const beats = p.segments.map((sg, i) => `${i + 1}. ${sg.text}`).join('\n');
+    await notify(`🔥 PAUTA MUITO QUENTE (${heat.nota}/10) — reel? #${event.id}\n${event.title}\n\n📝 ROTEIRO:\n${beats}\n\nLegenda: ${cap}\n\nResponda "renderiza ${event.id}" pra ver o vídeo, "roteiro ${event.id}" pra refazer, ou ignora.`);
+  } catch (err) {
+    log(`gate #${event.id}: roteiro falhou (${String(err).slice(0, 60)})`);
+  }
 }
 
 writeFileSync(STATE, JSON.stringify(seen, null, 2));

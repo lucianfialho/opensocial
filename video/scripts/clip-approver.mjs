@@ -44,6 +44,24 @@ function publish(cand) {
   return url;
 }
 
+/** Beat script → Telegram-readable summary for the approval gate. */
+function formatScript(eid) {
+  const p = JSON.parse(readFileSync(join(root, 'out', `vox-${eid}-collage.props.json`), 'utf8'));
+  const cap = existsSync(join(root, 'out', `vox-${eid}.caption.txt`)) ? readFileSync(join(root, 'out', `vox-${eid}.caption.txt`), 'utf8') : '';
+  const lines = [`📝 ROTEIRO #${eid}`, ''];
+  p.segments.forEach((sg, i) => {
+    const el = [];
+    if (sg.ransom) el.push(`RANSOM:${sg.ransom}`);
+    if (sg.big) el.push(`número:${sg.big}`);
+    if (sg.circle) el.push(`círculo:${sg.circle}`);
+    if (sg.entity) el.push(`sticker:${sg.entity.nome}`);
+    if (sg.poster) el.push('pôster');
+    lines.push(`${i + 1}. ${sg.text}${el.length ? `  [${el.join(', ')}]` : ''}`);
+  });
+  lines.push('', `Legenda: ${cap.split('\n')[0]}`, '', `Responda "renderiza ${eid}" (colagem) ou "renderiza ${eid} cinetico". Pra refazer: "roteiro ${eid}".`);
+  return lines.join('\n');
+}
+
 async function handle(text) {
   const t = text.trim().toLowerCase();
   // "busca" dispara uma rodada do scout na hora
@@ -63,6 +81,57 @@ async function handle(text) {
     }
     return;
   }
+  // ---- explainer (reel Vox) gate: roteiro → renderiza → publica ----
+  const ex = t.match(/^(roteiro|renderiza|publica-reel|publicareel)\s+#?(\d+)(?:\s+(cinetico|cinético|colagem))?/);
+  if (ex) {
+    const [, verb, eid, modo] = ex;
+    const vidPath = join(root, 'out', `vox-${eid}-collage.mp4`);
+    const vidPathK = join(root, 'out', `vox-${eid}.mp4`);
+    if (verb === 'roteiro') {
+      await notify(`✍️ Escrevendo o roteiro de #${eid}... (~1 min)`);
+      try {
+        execFileSync('node', ['scripts/vox-explainer.mjs', `--id=${eid}`, '--collage', '--dry'],
+          {cwd: root, encoding: 'utf8', timeout: 10 * 60_000, env: process.env});
+        await notify(formatScript(eid));
+      } catch (err) {
+        await notify(`❌ roteiro falhou: ${String(err.message).slice(0, 200)}`);
+      }
+      return;
+    }
+    if (verb === 'renderiza') {
+      const collage = modo !== 'cinetico' && modo !== 'cinético';
+      await notify(`🎬 Renderizando #${eid} (${collage ? 'colagem' : 'cinético'})... (~2 min)`);
+      try {
+        const args = ['scripts/vox-explainer.mjs', `--id=${eid}`];
+        if (collage) args.push('--collage');
+        execFileSync('node', args, {cwd: root, encoding: 'utf8', timeout: 20 * 60_000, env: process.env});
+        const {loadConfig, createMediaHost} = await import(join(root, '..', 'core', 'dist', 'index.js'));
+        const host = createMediaHost(loadConfig().mediaHost);
+        const {url} = await host.upload(collage ? vidPath : vidPathK);
+        await notify(`▶️ #${eid} pronto:\n${url}\n\nResponda "publica-reel ${eid}" pra subir, ou "roteiro ${eid}" pra refazer.`);
+      } catch (err) {
+        await notify(`❌ render falhou: ${String(err.message).slice(0, 200)}`);
+      }
+      return;
+    }
+    // publica-reel
+    const file = existsSync(vidPath) ? vidPath : existsSync(vidPathK) ? vidPathK : null;
+    if (!file) return notify(`#${eid} ainda não foi renderizado — manda "renderiza ${eid}" antes.`);
+    const caption = readFileSync(join(root, 'out', `vox-${eid}.caption.txt`), 'utf8');
+    const thumb = existsSync(join(root, 'out', `vox-${eid}.thumb.txt`)) ? readFileSync(join(root, 'out', `vox-${eid}.thumb.txt`), 'utf8').trim() : null;
+    await notify(`📤 Publicando #${eid} no Instagram...`);
+    try {
+      const args = [join(root, '..', 'cli', 'dist', 'index.js'), 'post', '--to', 'instagram', '--text', caption, '--media', file];
+      if (thumb) args.push('--thumb-offset', thumb);
+      const out = execFileSync('node', args, {encoding: 'utf8', timeout: 30 * 60_000});
+      const url = out.match(/https:\/\/www\.instagram\.com\S+/)?.[0] ?? '(sem link)';
+      await notify(`✅ Reel #${eid} no ar: ${url}`);
+    } catch (err) {
+      await notify(`❌ publicação falhou: ${String(err.message).slice(0, 200)}`);
+    }
+    return;
+  }
+
   const m = t.match(/^(publica|pula)\s+#?(\d+)/);
   if (!m) return;
   const [, verb, id] = m;
