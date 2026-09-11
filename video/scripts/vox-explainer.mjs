@@ -41,7 +41,11 @@ AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o tí
 
 NOME DO PRODUTO: cite o nome exato do produto/modelo da pauta pelo menos uma vez (o público precisa saber do que se fala — e o beat que o apresenta pode usar o cartão-título dele como foto).
 
-REGISTRO DE VOZ: escreva como uma pessoa mandando ÁUDIO NO WHATSAPP pra um amigo — informal, direto, falado ("mano", "olha isso", "pra você ter ideia"), sem tom de locutor e sem formalidade de telejornal. É alguém contando algo que acabou de ver, com a empolgação real de quem conta.
+REGISTRO DE VOZ — escolha pelo peso da pauta, e declare em "registro" no topo do JSON:
+- "zap" (pauta leve, produto, curiosidade, recorde): áudio de WhatsApp pra um amigo — informal, "mano", "olha isso", empolgação real.
+- "sinistro" (pauta grave: armas, vigilância, vazamento, morte, crime, abuso): voz de repórter investigativo — sóbria, frases curtas e cortantes, ZERO gíria, zero "mano", tensão contida em vez de empolgação. Fatos secos que assustam por si. Pense em documentário, não em stories.
+- "editorial" (política, regulação, economia): analítico, direto, sem gíria e sem drama.
+Em todos: falado, não escrito; nunca tom de locutor de telejornal.
 
 FORMATO: 4 a 6 beats; narração total de 40 a 65 palavras; frases curtas, ritmo de fala, pt-BR.
 
@@ -59,7 +63,7 @@ ${menu}
 caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags).
 
 Responda SÓ JSON:
-{"beats": [...], "caption": "..."}`;
+{"registro": "zap|sinistro|editorial", "beats": [...], "caption": "..."}`;
 
 // all candidate images, vision-described: the writer may stage a photo
 // ONLY on a beat whose text matches the description (wrong photo under
@@ -203,7 +207,7 @@ const TOM_OK = new Set(['excited', 'serious', 'curious', 'whispers', 'emphatic',
 const NARRATION = script.beats.map((b) => b.texto).join(' ');
 const TAGGED = script.beats
   .map((b) => (TOM_OK.has(b.tom) ? `[${b.tom}] ` : '') + b.texto)
-  .join(' ') + ' [casual] Isso foi o agêntico. Segue a gente.';
+  .join(' ') + (script.registro === 'zap' ? ' [casual] Isso foi o agêntico. Segue a gente.' : ' [serious] Isso foi o agêntico. Siga pra acompanhar.');
 let clip;
 try {
   clip = await narrateContinuous(id, TAGGED, envValue('ELEVENLABS_API_KEY'));
@@ -219,9 +223,10 @@ try {
 
 // music bed picked by the script's dominant voice direction
 const toms = script.beats.map((b) => b.tom);
-const musicSrc = toms.filter((t) => ['dramatic', 'serious', 'whispers'].includes(t)).length >= toms.length / 2
+const musicSrc = script.registro === 'sinistro' || toms.filter((t) => ['dramatic', 'serious', 'whispers'].includes(t)).length >= toms.length / 2
   ? 'trilhas/tensa.mp3'
   : toms.includes('excited') ? 'trilhas/curiosa.mp3' : 'trilhas/leve.mp3';
+log(`registro: ${script.registro ?? '?'}`);
 log(`trilha: ${musicSrc}`);
 
 const props = {
