@@ -339,6 +339,9 @@ if (dry) {
 log('renderizando...');
 execFileSync('npx', [
   'remotion', 'render', 'VoxExplainer', join(root, 'out', `vox-${id}${suffix}.mp4`),
-  `--props=${propsPath}`, '--codec=h264', '--timeout=120000',
+  `--props=${propsPath}`, '--codec=h264',
+  // 2-vCPU VPS: stray font delayRender handles expire mid-render unless the
+  // timeout exceeds the whole render wall-clock (same lesson as tweet-clip)
+  '--timeout=900000', '--concurrency=1',
 ], {cwd: root, stdio: 'inherit'});
 log(`pronto: out/vox-${id}${suffix}.mp4 (caption em out/vox-${id}.caption.txt)`);
