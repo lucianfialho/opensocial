@@ -12,6 +12,7 @@ import {chatCompletion, parseJsonBlock} from './llm.mjs';
 import {checkCopy} from './copy-check.mjs';
 import {visualEntities} from './entities.mjs';
 import {generatePoster} from './collage-posters.mjs';
+import {fetchSources} from './sources.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // explainer voice: Raquel (conversational pt-BR) at expressive stability,
@@ -38,6 +39,8 @@ const byName = new Map(catalog.map((c) => [c.nome, c]));
 const menu = catalog.map((c) => `${c.nome}: ${(c.conceitos ?? []).join(', ')}`).join('\n');
 
 const PROMPT = `Você roteiriza um reel explainer (estilo Vox) do "o agêntico", veículo brasileiro de notícias de IA/tech. Converta a síntese em BEATS de narração com elementos visuais.
+
+MATÉRIA-PRIMA: além da síntese, o input traz "fontes" — o texto das matérias originais. É DALI que saem os números exatos, as citações entre aspas, os nomes e o contexto que fazem um explainer valer a pena. Garimpe: o dado mais surpreendente das fontes lidera o beat 1. Regra dura: nenhum fato que não esteja na síntese ou nas fontes.
 
 AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o título reescrito); cada beat acrescenta fato NOVO; números amarrados ao significado; escolha UMA emoção dominante e escreva nela. Clichês banidos: "o futuro está em jogo", "marco histórico", "divisor de águas".
 
@@ -98,14 +101,22 @@ for (const [i, cand] of imgCands.entries()) {
   } catch {}
 }
 
-const synthesis = {titulo: detail.title, resumo: detail.summary, fatos: (detail.claims ?? []).map((c) => c.texto).slice(0, 8), imagensDisponiveis: imagens.map((m) => ({indice: m.indice, descricao: m.descricao}))};
+const fontes = await fetchSources(id, detail.artigos ?? []);
+log(`fontes: ${fontes.length} artigo(s), ${fontes.reduce((a, f) => a + f.texto.length, 0)} chars de matéria-prima`);
+const synthesis = {
+  titulo: detail.title,
+  resumo: detail.summary,
+  fatos: (detail.claims ?? []).map((c) => c.texto).slice(0, 8),
+  fontes: fontes.map((f) => ({veiculo: f.fonte, texto: f.texto})),
+  imagensDisponiveis: imagens.map((m) => ({indice: m.indice, descricao: m.descricao})),
+};
 
 let script = null;
 for (let attempt = 1; attempt <= 2 && !script; attempt++) {
   try {
     const text = await chatCompletion({
       model: MODEL,
-      max_tokens: 8192,
+      max_tokens: 16000,
       messages: [
         {role: 'system', content: PROMPT},
         {role: 'user', content: JSON.stringify(synthesis)},

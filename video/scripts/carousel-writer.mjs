@@ -8,11 +8,14 @@ import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {checkCopy} from './copy-check.mjs';
 import {chatCompletion, llmKey, parseJsonBlock} from './llm.mjs';
+import {fetchSources} from './sources.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
 
 const PROMPT = `Você é o editor de social do "o agêntico", veículo brasileiro de notícias de IA e tech. Converta a síntese de uma notícia em um roteiro de carrossel de Instagram no estilo revista. O carrossel é uma HISTÓRIA que o leitor desliza — não uma lista de fatos.
+
+MATÉRIA-PRIMA: o input traz "fontes" — o texto das matérias originais. Números exatos, citações, nomes e contexto vêm DALI; a síntese é só o mapa. Regra dura: nenhum fato fora da síntese ou das fontes.
 
 AS 4 LEIS DO ROTEIRO:
 1. ARCO (estrutura PAS): a capa abre com TENSÃO — o fato mais surpreendente, o número que choca ou a pergunta que incomoda. NUNCA o título da notícia reescrito. Os cards seguintes agitam (por que isso mexe com a vida de quem lê), desenvolvem (o que aconteceu de fato) e fecham com punchline (a consequência ou a pergunta que fica). Antes de escrever, identifique: qual é O fato da história? Ele lidera a capa.
@@ -52,10 +55,13 @@ export async function writeCarouselScript(story, detail, images = []) {
     imagens = await describeImages(images, apiKey);
     console.log(`vision: ${imagens.length} imagens analisadas (${imagens.filter((i) => i.pessoa_identificavel).length} com pessoa identificável)`);
   }
+  const fontes = await fetchSources(story.id, detail.artigos ?? []);
+  console.log(`fontes: ${fontes.length} artigo(s) extraído(s)`);
   const synthesis = {
     titulo: story.title,
     resumo: detail.summary,
     fatos: (detail.claims ?? []).map((c) => c.texto),
+    fontes: fontes.map((f) => ({veiculo: f.fonte, texto: f.texto})),
     veiculosIndependentes: story.independentSources,
     imagens,
   };
