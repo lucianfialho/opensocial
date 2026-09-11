@@ -43,11 +43,10 @@ AS 4 LEIS: arco PAS (beat 1 = TENSÃO, o fato mais surpreendente — nunca o tí
 
 NOME DO PRODUTO: cite o nome exato do produto/modelo da pauta pelo menos uma vez (o público precisa saber do que se fala — e o beat que o apresenta pode usar o cartão-título dele como foto).
 
-REGISTRO DE VOZ — escolha pelo peso da pauta, e declare em "registro" no topo do JSON:
-- "zap" (pauta leve, produto, curiosidade, recorde): áudio de WhatsApp pra um amigo — informal, "mano", "olha isso", empolgação real.
-- "sinistro" (pauta grave: armas, vigilância, vazamento, morte, crime, abuso): voz de repórter investigativo — sóbria, frases curtas e cortantes, ZERO gíria, zero "mano", tensão contida em vez de empolgação. Fatos secos que assustam por si. Pense em documentário, não em stories.
-- "editorial" (política, regulação, economia): analítico, direto, sem gíria e sem drama.
-Em todos: falado, não escrito; nunca tom de locutor de telejornal.
+REGISTRO DE VOZ — jornalístico SEMPRE. Repórter contando a história a um amigo inteligente: direto, falado, frases curtas, ritmo de conversa — mas ZERO gíria ("mano", "cara", "olha isso", "na cara dura" são PROIBIDOS), zero emoji, zero tom de stories. Declare em "registro" no topo do JSON:
+- "sinistro" (pauta grave: armas, vigilância, vazamento, morte, crime, abuso): tensão contida, fatos secos que assustam por si, pense em documentário investigativo.
+- "editorial" (todo o resto: produto, empresa, política, curiosidade, recorde): analítico e vivo, ironia fina permitida, empolgação contida — nunca infantil.
+Em ambos: falado, não escrito; nunca tom de locutor de telejornal.
 
 FORMATO: 4 a 6 beats; narração total de 40 a 65 palavras; frases curtas, ritmo de fala, pt-BR.
 
@@ -64,10 +63,10 @@ ${menu}
 
 ${collage ? `MODO COLAGEM: cada beat ganha também "poster": {"cena": "3-5 peças recortadas descritas em inglês, cada uma um objeto/figura concreto (ex.: 'a halftone cutout of a scientist in a lab coat, a torn newspaper strip, a virus illustration, a red stamp'), SEM texto na cena", "manchete": "1-3 palavras em CAPS pt-BR que resumem o beat (vai impressa no pôster)", "bg": "cream|ink|yellow — varie entre beats, ink pro momento mais pesado"}. Nesse modo NÃO use foto nem prop (o pôster é a imagem).` : ''}
 
-caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags).
+caption: legenda do post (gancho + 2-3 linhas + "Siga @oagentico" + 4 hashtags). SEM emoji.
 
 Responda SÓ JSON:
-{"registro": "zap|sinistro|editorial", "beats": [{"texto": "...", "tom": "...", ${collage ? '"poster": {"cena": "...", "manchete": "...", "bg": "..."}, ' : ''}...}], "caption": "..."}${collage ? '\nOBRIGATÓRIO no modo colagem: TODO beat tem "poster" preenchido.' : ''}`;
+{"registro": "sinistro|editorial", "beats": [{"texto": "...", "tom": "...", ${collage ? '"poster": {"cena": "...", "manchete": "...", "bg": "..."}, ' : ''}...}], "caption": "..."}${collage ? '\nOBRIGATÓRIO no modo colagem: TODO beat tem "poster" preenchido.' : ''}`;
 
 // all candidate images, vision-described: the writer may stage a photo
 // ONLY on a beat whose text matches the description (wrong photo under
@@ -231,7 +230,7 @@ const TOM_OK = new Set(['excited', 'serious', 'curious', 'whispers', 'emphatic',
 const NARRATION = script.beats.map((b) => b.texto).join(' ');
 const TAGGED = script.beats
   .map((b) => (TOM_OK.has(b.tom) ? `[${b.tom}] ` : '') + b.texto)
-  .join(' ') + (script.registro === 'zap' ? ' [casual] Isso foi o agêntico. Segue a gente.' : ' [serious] Isso foi o agêntico. Siga pra acompanhar.');
+  .join(' ') + ' [serious] Isso foi o agêntico. Siga pra acompanhar.';
 let clip;
 try {
   if (dry) throw new Error('dry run: sem TTS');
