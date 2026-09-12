@@ -45,8 +45,8 @@ function publish(cand) {
 }
 
 /** Beat script → Telegram-readable summary for the approval gate. */
-function formatScript(eid) {
-  const p = JSON.parse(readFileSync(join(root, 'out', `vox-${eid}-collage.props.json`), 'utf8'));
+function formatScript(eid, suffix = '-resumo-collage', livre = false) {
+  const p = JSON.parse(readFileSync(join(root, 'out', `vox-${eid}${suffix}.props.json`), 'utf8'));
   const cap = existsSync(join(root, 'out', `vox-${eid}.caption.txt`)) ? readFileSync(join(root, 'out', `vox-${eid}.caption.txt`), 'utf8') : '';
   const lines = [`📝 ROTEIRO #${eid}`, ''];
   p.segments.forEach((sg, i) => {
@@ -58,7 +58,7 @@ function formatScript(eid) {
     if (sg.poster) el.push('pôster');
     lines.push(`${i + 1}. ${sg.text}${el.length ? `  [${el.join(', ')}]` : ''}`);
   });
-  lines.push('', `Legenda: ${cap.split('\n')[0]}`, '', `Responda "renderiza ${eid}" (colagem) ou "renderiza ${eid} cinetico". Pra refazer: "roteiro ${eid}".`);
+  lines.push('', `Legenda: ${cap.split('\n')[0]}`, '', `${livre ? '(roteiro livre — Sonnet)' : '(narração = texto do site)'}\nResponda "renderiza ${eid}" pra gerar. Opções: "livre" (roteiro Sonnet), "cinetico" (sem colagem). Refazer: "roteiro ${eid}".`);
   return lines.join('\n');
 }
 
@@ -82,35 +82,39 @@ async function handle(text) {
     return;
   }
   // ---- explainer (reel Vox) gate: roteiro → renderiza → publica ----
-  const ex = t.match(/^(roteiro|renderiza|publica-reel|publicareel)\s+#?(\d+)(?:\s+(cinetico|cinético|colagem))?/);
+  const ex = t.match(/^(roteiro|renderiza|publica-reel|publicareel)\s+#?(\d+)((?:\s+(?:cinetico|cinético|colagem|livre))*)/);
   if (ex) {
-    const [, verb, eid, modo] = ex;
-    const vidPath = join(root, 'out', `vox-${eid}-collage.mp4`);
-    const vidPathK = join(root, 'out', `vox-${eid}.mp4`);
+    const [, verb, eid, modosRaw] = ex;
+    const modos = (modosRaw ?? '').trim().split(/\s+/).filter(Boolean);
+    // default: site summary as narration (--resumo) + collage posters
+    const livre = modos.includes('livre');
+    const collage = !(modos.includes('cinetico') || modos.includes('cinético'));
+    const modeArgs = [...(livre ? [] : ['--resumo']), ...(collage ? ['--collage'] : [])];
+    const suffix = (livre ? '' : '-resumo') + (collage ? '-collage' : '');
+    const vidPath = join(root, 'out', `vox-${eid}${suffix}.mp4`);
+    const vidPathK = vidPath;
     if (verb === 'roteiro') {
       await notify(`✍️ Escrevendo o roteiro de #${eid}... (~1 min)`);
       try {
-        execFileSync('node', ['scripts/vox-explainer.mjs', `--id=${eid}`, '--collage', '--dry'],
+        execFileSync('node', ['scripts/vox-explainer.mjs', `--id=${eid}`, ...modeArgs, '--dry'],
           {cwd: root, stdio: ['ignore', 'inherit', 'inherit'], timeout: 10 * 60_000, env: process.env});
-        await notify(formatScript(eid));
+        await notify(formatScript(eid, suffix, livre));
       } catch (err) {
         await notify(`❌ roteiro falhou: ${String(err.message).slice(0, 200)}`);
       }
       return;
     }
     if (verb === 'renderiza') {
-      const collage = modo !== 'cinetico' && modo !== 'cinético';
-      await notify(`🎬 Renderizando #${eid} (${collage ? 'colagem' : 'cinético'})... (~2 min)`);
+      await notify(`🎬 Renderizando #${eid} (${livre ? 'roteiro livre' : 'resumo do site'}, ${collage ? 'colagem' : 'cinético'})... (~10 min na VPS)`);
       try {
-        const args = ['scripts/vox-explainer.mjs', `--id=${eid}`];
-        if (collage) args.push('--collage');
+        const args = ['scripts/vox-explainer.mjs', `--id=${eid}`, ...modeArgs];
         // stdio inherit: remotion's progress flood would overflow a captured
         // buffer and kill the daemon mid-render
         execFileSync('node', args, {cwd: root, stdio: ['ignore', 'inherit', 'inherit'], timeout: 25 * 60_000, env: process.env});
         log(`render #${eid} concluído, enviando link`);
         const {loadConfig, createMediaHost} = await import(`file://${join(root, '..', 'core', 'dist', 'index.js')}`);
         const host = createMediaHost(loadConfig().mediaHost);
-        const {url} = await host.upload(collage ? vidPath : vidPathK);
+        const {url} = await host.upload(vidPath);
         await notify(`▶️ #${eid} pronto:\n${url}\n\nResponda "publica-reel ${eid}" pra subir, ou "roteiro ${eid}" pra refazer.`);
       } catch (err) {
         await notify(`❌ render falhou: ${String(err.message).slice(0, 200)}`);
@@ -118,7 +122,7 @@ async function handle(text) {
       return;
     }
     // publica-reel
-    const file = existsSync(vidPath) ? vidPath : existsSync(vidPathK) ? vidPathK : null;
+    const file = [vidPath, ...['-resumo-collage', '-collage', '-resumo', ''].map((sf) => join(root, 'out', `vox-${eid}${sf}.mp4`))].find((f) => existsSync(f)) ?? null;
     if (!file) return notify(`#${eid} ainda não foi renderizado — manda "renderiza ${eid}" antes.`);
     const caption = readFileSync(join(root, 'out', `vox-${eid}.caption.txt`), 'utf8');
     const thumb = existsSync(join(root, 'out', `vox-${eid}.thumb.txt`)) ? readFileSync(join(root, 'out', `vox-${eid}.thumb.txt`), 'utf8').trim() : null;

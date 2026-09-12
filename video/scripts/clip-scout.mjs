@@ -170,9 +170,9 @@ for (const event of dados.slice(0, top)) {
   if (heat.nota < HOT) continue;
   log(`🔥 pauta ${heat.nota}/10 (#${event.id}) — escrevendo roteiro pro gate`);
   try {
-    execFileSync('node', ['scripts/vox-explainer.mjs', `--id=${event.id}`, '--collage', '--dry'],
+    execFileSync('node', ['scripts/vox-explainer.mjs', `--id=${event.id}`, '--resumo', '--collage', '--dry'],
       {cwd: root, encoding: 'utf8', timeout: 10 * 60_000, env: process.env});
-    const p = JSON.parse(readFileSync(join(root, 'out', `vox-${event.id}-collage.props.json`), 'utf8'));
+    const p = JSON.parse(readFileSync(join(root, 'out', `vox-${event.id}-resumo-collage.props.json`), 'utf8'));
     const cap = readFileSync(join(root, 'out', `vox-${event.id}.caption.txt`), 'utf8').split('\n')[0];
     const beats = p.segments.map((sg, i) => `${i + 1}. ${sg.text}`).join('\n');
     await notify(`🔥 PAUTA MUITO QUENTE (${heat.nota}/10) — reel? #${event.id}\n${event.title}\n\n📝 ROTEIRO:\n${beats}\n\nLegenda: ${cap}\n\nResponda "renderiza ${event.id}" pra ver o vídeo, "roteiro ${event.id}" pra refazer, ou ignora.`);
