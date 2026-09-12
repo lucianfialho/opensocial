@@ -1,8 +1,6 @@
 {
   "_comment": "Dicionário de pronúncia pt-BR para termos tech. alias = como a voz deve LER o termo. Edite aqui e rode: node scripts/sync-pronuncia.mjs",
   "regras": {
-    "ChatGPT": "Chét Gê Pê Tê",
-    "GPT": "Gê Pê Tê",
     "OpenAI": "Ôupen Ai",
     "Nvidia": "Envídia",
     "NVIDIA": "Envídia",
@@ -30,7 +28,6 @@
     "streaming": "istríming",
     "EUA": "Estados Unidos",
     "UE": "União Europeia",
-    "CEO": "Cê É Ó",
     "EUA.": "Estados Unidos.",
     "IA": "í-á",
     "ECMWF": "É Cê Éme Dáblio Éfe"
