@@ -15,9 +15,9 @@ import {generatePoster} from './collage-posters.mjs';
 import {fetchSources} from './sources.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-// explainer voice: Raquel (conversational pt-BR) at expressive stability,
-// overridable via env without touching the reporter bench
-process.env.ELEVENLABS_VOICE_ID = process.env.OPENSOCIAL_VOX_VOICE_ID ?? 'GDzHdQOi6jjf8zaXhCYD';
+// explainer voice: Matheus Moretti ("Urgent and Firm", v3-native pt-BR) —
+// the reportage register's voice. Overridable via env.
+process.env.ELEVENLABS_VOICE_ID = process.env.OPENSOCIAL_VOX_VOICE_ID ?? 'F7823wtD50WK1gnmgBk5';
 process.env.OPENSOCIAL_TTS_STABILITY = process.env.OPENSOCIAL_TTS_STABILITY ?? '0.35';
 const API = 'https://oagentico.com.br/api/v1';
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
