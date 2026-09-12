@@ -10,8 +10,10 @@ import {fileURLToPath} from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 30;
-const SPEED = 1.2; // ElevenLabs API cap
-const TEMPO = 1.25; // ffmpeg atempo on top → 1.2 × 1.25 = 1.5x effective
+// NewsSplit reporters ran 1.2 (API) × 1.25 (ffmpeg atempo) = 1.5x; the
+// explainer overrides both via env (OPENSOCIAL_TTS_SPEED / _TEMPO)
+const SPEED = Number(process.env.OPENSOCIAL_TTS_SPEED ?? 1.2);
+const TEMPO = Number(process.env.OPENSOCIAL_TTS_TEMPO ?? 1.25);
 const MODEL = 'eleven_v3';
 // The reporter pool: three native pt-BR voices, rotated per event so each
 // story keeps a consistent voice across re-renders (cache-friendly).

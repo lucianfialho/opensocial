@@ -19,6 +19,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // the reportage register's voice. Overridable via env.
 process.env.ELEVENLABS_VOICE_ID = process.env.OPENSOCIAL_VOX_VOICE_ID ?? 'F7823wtD50WK1gnmgBk5';
 process.env.OPENSOCIAL_TTS_STABILITY = process.env.OPENSOCIAL_TTS_STABILITY ?? '0.35';
+// 1.25x straight from the API (no ffmpeg tempo): the reportage pace
+process.env.OPENSOCIAL_TTS_SPEED = process.env.OPENSOCIAL_TTS_SPEED ?? '1.25';
+process.env.OPENSOCIAL_TTS_TEMPO = process.env.OPENSOCIAL_TTS_TEMPO ?? '1';
 const API = 'https://oagentico.com.br/api/v1';
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
 const FPS = 30;
