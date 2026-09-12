@@ -29,6 +29,9 @@ const FPS = 30;
 const id = Number(process.argv.find((a) => a.startsWith('--id='))?.split('=')[1]);
 const dry = process.argv.includes('--dry');
 const collage = process.argv.includes('--collage');
+// --resumo: narration IS the site's title + summary, verbatim. The LLM only
+// directs: splits into beats and picks the visual elements.
+const resumo = process.argv.includes('--resumo');
 if (!id) throw new Error('use --id=<eventId>');
 const log = (m) => console.log(`[vox ${new Date().toISOString()}] ${m}`);
 
@@ -119,6 +122,20 @@ for (const [i, cand] of imgCands.entries()) {
 
 const fontes = await fetchSources(id, detail.artigos ?? []);
 log(`fontes: ${fontes.length} artigo(s), ${fontes.reduce((a, f) => a + f.texto.length, 0)} chars de matéria-prima`);
+const DIRECTOR_PROMPT = `Você é o DIRETOR de um reel explainer (estilo Vox) do "o agêntico". O texto da narração JÁ ESTÁ PRONTO e é INTOCÁVEL: você recebe "narracao" e devolve os mesmos caracteres divididos em beats — sem reescrever, sem cortar, sem acrescentar uma palavra. A concatenação dos "texto" dos beats com espaço simples tem que ser IGUAL à narração original.
+
+Seu trabalho é a DIREÇÃO VISUAL de cada beat:
+- "tom": serious | curious | emphatic | dramatic (varie com o arco)
+- "destaques": 1-2 trechos EXATOS do texto do beat pra marcar de amarelo (máx 4 palavras cada)
+- "numeroGigante": token EXATO com número forte, ou null (máx 1 no roteiro)
+- "circulo": palavra EXATA pra circular à mão, ou null (máx 2 no roteiro)
+- "ransom": PALAVRA-IMPACTO em CAPS (≤12 letras) que resume o beat, ou null (máx 1)
+- "poster": {"cena": "3-5 peças recortadas em inglês, objetos/figuras concretos, SEM texto, SEM logo de empresa real", "manchete": "1-3 palavras CAPS pt-BR", "bg": "cream|ink|yellow (varie)"} — obrigatório em todo beat
+Quebre em 3 a 5 beats por unidade de sentido (frase ou par de frases). Beat 1 = o título.
+
+Responda SÓ JSON:
+{"registro": "editorial|sinistro", "beats": [{"texto": "...", "tom": "...", "destaques": [], "numeroGigante": null, "circulo": null, "ransom": null, "poster": {...}}], "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4"]}`;
+
 const synthesis = {
   titulo: detail.title,
   resumo: detail.summary,
@@ -130,12 +147,13 @@ const synthesis = {
 let script = null;
 for (let attempt = 1; attempt <= 3 && !script; attempt++) {
   try {
+    const NARR_FIXA = resumo ? `${detail.title.trim().replace(/[.!?]?$/, '.')} ${(detail.summary ?? '').trim()}` : null;
     const text = await chatCompletion({
       model: MODEL,
       max_tokens: 16000,
       messages: [
-        {role: 'system', content: PROMPT},
-        {role: 'user', content: JSON.stringify(synthesis)},
+        {role: 'system', content: resumo ? DIRECTOR_PROMPT : PROMPT},
+        {role: 'user', content: JSON.stringify(resumo ? {narracao: NARR_FIXA, titulo: detail.title} : synthesis)},
       ],
     });
     globalThis.__lastRaw = text;
@@ -143,7 +161,22 @@ for (let attempt = 1; attempt <= 3 && !script; attempt++) {
     writeFileSync(join(root, 'out', `vox-${id}.prompt.txt`), PROMPT);
     const out = parseJsonBlock(text);
     if (!Array.isArray(out.beats) || out.beats.length < 3) throw new Error('beats insuficientes');
-    if (fontes.length > 0) {
+    if (resumo) {
+      // the narration must survive untouched — compare normalized
+      const norm = (t) => t.replace(/\s+/g, ' ').trim();
+      const joined = norm(out.beats.map((b) => b.texto).join(' '));
+      if (joined !== norm(NARR_FIXA)) throw new Error('diretor alterou a narração');
+      // caption is canonical too: the site's summary + CTA + the director's hashtags
+      const tags = (Array.isArray(out.hashtags) ? out.hashtags : []).filter((t) => /^#\w+$/.test(t)).slice(0, 4).join(' ');
+      out.caption = `${detail.title}\n\n${(detail.summary ?? '').trim()}\n\nSiga @oagentico\n${tags}`;
+      // director limits are hard: keep only the first ransom / big number
+      let seenRansom = false, seenBig = false;
+      for (const b of out.beats) {
+        if (b.ransom) { if (seenRansom) b.ransom = null; seenRansom = true; }
+        if (b.numeroGigante) { if (seenBig) b.numeroGigante = null; seenBig = true; }
+      }
+    }
+    if (!resumo && fontes.length > 0) {
       const pepitas = Array.isArray(out.garimpo) ? out.garimpo : [];
       if (pepitas.length < 3) throw new Error('garimpo insuficiente (fontes ignoradas)');
       // at least one beat must carry a distinctive token from a nugget
@@ -161,7 +194,7 @@ for (let attempt = 1; attempt <= 3 && !script; attempt++) {
       if (a.size > 3 && inter / Math.min(a.size, b.size) > 0.6) throw new Error(`beats ${i + 1} e ${j + 1} repetem o mesmo conteúdo`);
     }
     const words = out.beats.map((b) => b.texto).join(' ').split(/\s+/).filter(Boolean);
-    if (words.length < 30 || words.length > 80) throw new Error(`narração com ${words.length} palavras`);
+    if (!resumo && (words.length < 30 || words.length > 80)) throw new Error(`narração com ${words.length} palavras`);
     const gate = checkCopy({headline: out.beats[0].texto.slice(0, 100), caption: `${out.caption} ${out.beats.map((b) => b.texto).join(' ')}`});
     if (!gate.ok) throw new Error(`trava de qualidade: ${gate.motivo}`);
     if (/\b(um|uma|outro|outra) (usu[áa]rio|internauta|pessoa|comentarista)\b/i.test(out.beats.map((b) => b.texto).join(' '))) {
@@ -310,7 +343,7 @@ const props = {
   segments,
 };
 mkdirSync(join(root, 'out'), {recursive: true});
-const suffix = collage ? '-collage' : '';
+const suffix = (resumo ? '-resumo' : '') + (collage ? '-collage' : '');
 const propsPath = join(root, 'out', `vox-${id}${suffix}.props.json`);
 writeFileSync(propsPath, JSON.stringify(props, null, 2));
 writeFileSync(join(root, 'out', `vox-${id}.caption.txt`), script.caption);
