@@ -21,3 +21,10 @@ export const HANDLE = profile.handle;
 /** Per-account state dir: queue, seen sets, candidates never collide. */
 export const stateFile = (name) =>
   join(process.env.HOME ?? '', '.config', 'opensocial', profile.id === 'oagentico' ? name : `${profile.id}-${name}`);
+
+/** Where the opensocial checkout lives (cli + core). OPENSOCIAL_HOME after
+ *  the repo split; the old monorepo sibling layout as fallback. */
+export const opensocialHome = () =>
+  process.env.OPENSOCIAL_HOME ?? join(root, '..');
+export const opensocialCli = () => join(opensocialHome(), 'packages', 'cli', 'dist', 'index.js');
+export const opensocialCore = () => `file://${join(opensocialHome(), 'packages', 'core', 'dist', 'index.js')}`;

@@ -11,10 +11,10 @@ import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {judgeHeat} from './heat-judge.mjs';
 import {notify} from './clip-scout-lib.mjs';
-import {API, BRAND, HANDLE, profile, stateFile, apiToken} from './profile.mjs';
+import {API, BRAND, HANDLE, profile, stateFile, apiToken, opensocialCli} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const cli = join(root, '..', 'cli', 'dist', 'index.js');
+const cli = opensocialCli();
 
 const STATE_FILE = stateFile('oagentico-queue.json');
 

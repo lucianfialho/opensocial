@@ -11,7 +11,7 @@ import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {notify} from './clip-scout-lib.mjs';
 import {checkCopy} from './copy-check.mjs';
-import {API, BRAND, HANDLE, profile, stateFile} from './profile.mjs';
+import {API, BRAND, HANDLE, profile, stateFile, opensocialCli, opensocialCore} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CANDS = stateFile('clip-candidates.json');
@@ -38,7 +38,7 @@ function publish(cand) {
   const slug = createHash('md5').update(best.url).digest('hex').slice(0, 8);
   const caption = readFileSync(join(root, 'out', `tweetclip-${slug}.caption.txt`), 'utf8');
   const out = execFileSync('node', [
-    join(root, '..', 'cli', 'dist', 'index.js'), 'post', '--to', 'instagram',
+    opensocialCli(), 'post', '--to', 'instagram',
     '--text', caption, '--media', join(root, 'out', `tweetclip-${slug}.mp4`),
   ], {encoding: 'utf8', timeout: 30 * 60_000});
   const url = out.match(/https:\/\/www\.instagram\.com\S+/)?.[0] ?? '(sem link)';
@@ -113,7 +113,7 @@ async function handle(text) {
         // buffer and kill the daemon mid-render
         execFileSync('node', args, {cwd: root, stdio: ['ignore', 'inherit', 'inherit'], timeout: 25 * 60_000, env: process.env});
         log(`render #${eid} concluído, enviando link`);
-        const {loadConfig, createMediaHost} = await import(`file://${join(root, '..', 'core', 'dist', 'index.js')}`);
+        const {loadConfig, createMediaHost} = await import(opensocialCore());
         const host = createMediaHost(loadConfig().mediaHost);
         const {url} = await host.upload(vidPath);
         await notify(`▶️ #${eid} pronto:\n${url}\n\nResponda "publica-reel ${eid}" pra subir, ou "roteiro ${eid}" pra refazer.`);
@@ -129,7 +129,7 @@ async function handle(text) {
     const thumb = existsSync(join(root, 'out', `vox-${eid}.thumb.txt`)) ? readFileSync(join(root, 'out', `vox-${eid}.thumb.txt`), 'utf8').trim() : null;
     await notify(`📤 Publicando #${eid} no Instagram...`);
     try {
-      const args = [join(root, '..', 'cli', 'dist', 'index.js'), 'post', '--to', 'instagram', '--text', caption, '--media', file];
+      const args = [opensocialCli(), 'post', '--to', 'instagram', '--text', caption, '--media', file];
       if (thumb) args.push('--thumb-offset', thumb);
       const out = execFileSync('node', args, {encoding: 'utf8', timeout: 30 * 60_000});
       const url = out.match(/https:\/\/www\.instagram\.com\S+/)?.[0] ?? '(sem link)';

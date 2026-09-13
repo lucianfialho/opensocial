@@ -94,4 +94,4 @@ execFileSync('npx',
 const caption = `${headline}${credit ? `\n\n🎥 ${credit}` : ''}\n\nSiga @oagentico — o futuro da IA, todo dia, num clique.\n\n#inteligenciaartificial #ia #tecnologia #noticias`;
 writeFileSync(join(root, 'out', `tweetclip-${slug}.caption.txt`), caption);
 console.log(`\nPronto: packages/video/${output}`);
-console.log(`Publicar: node ../cli/dist/index.js post --to instagram --text "$(cat out/tweetclip-${slug}.caption.txt)" --media packages/video/${output}`);
+console.log(`Publicar: opensocial post --to instagram --text "$(cat out/tweetclip-${slug}.caption.txt)" --media packages/video/${output}`);
