@@ -6,6 +6,7 @@ import {mkdirSync, writeFileSync, existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import sharp from 'sharp';
 import {envValue} from './tts.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,19 +31,33 @@ export function posterPrompt({scene, headline, bg = 'cream'}) {
   ].join(' ');
 }
 
-/** Generates (or returns cached) poster for a beat → public/vox/ relative path. */
+/** Photo → collage: the real article image re-rendered as a halftone
+ *  cut-out inside the house style. Subject stays recognizable. */
+export function photoPosterPrompt({headline}) {
+  return [
+    'Turn the attached photo into a mixed-media hand-cut PAPER COLLAGE poster, vertical 9:16, editorial zine style. Keep the main subject of the photo RECOGNIZABLE, rendered as a PRINTED black-and-white halftone cut-out with torn white paper edges and a real paper drop shadow.',
+    'Add around it: tape corners, a torn newspaper strip, hand-drawn black pen circles and arrows pointing at the subject, one warm yellow (#ffe234) sticker. Cream paper background (#f6f1e0) with faint pencil sketch lines. NOT 3D, NOT CGI, keep print grain. No logos of real companies.',
+    headline ? `A torn-paper banner with a big bold headline "${headline}" in black cut-out letters.` : 'No readable text anywhere.',
+  ].join(' ');
+}
+
+/** Generates (or returns cached) poster for a beat → public/vox/ relative path.
+ *  spec.photo (local path) switches to photo-to-collage mode. */
 export async function generatePoster(id, beatIdx, spec) {
   mkdirSync(join(root, 'public', 'vox'), {recursive: true});
-  const prompt = posterPrompt(spec);
-  const hash = createHash('md5').update(IMAGE_MODEL + prompt).digest('hex').slice(0, 8);
+  const prompt = spec.photo ? photoPosterPrompt(spec) : posterPrompt(spec);
+  const hash = createHash('md5').update(IMAGE_MODEL + prompt + (spec.photo ?? '')).digest('hex').slice(0, 8);
   const rel = `vox/poster-${id}-${beatIdx}-${hash}.png`;
   const abs = join(root, 'public', rel);
   if (existsSync(abs)) return rel;
 
+  const content = spec.photo
+    ? [{type: 'text', text: prompt}, {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${(await sharp(spec.photo).resize(768, 768, {fit: 'inside'}).jpeg({quality: 85}).toBuffer()).toString('base64')}`}}]
+    : prompt;
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {authorization: `Bearer ${envValue('OPENROUTER_API_KEY')}`, 'content-type': 'application/json'},
-    body: JSON.stringify({model: IMAGE_MODEL, modalities: ['image', 'text'], messages: [{role: 'user', content: prompt}]}),
+    body: JSON.stringify({model: IMAGE_MODEL, modalities: ['image', 'text'], messages: [{role: 'user', content}]}),
   });
   if (!res.ok) throw new Error(`image gen ${res.status}`);
   const data = await res.json();

@@ -130,7 +130,10 @@ Seu trabalho é a DIREÇÃO VISUAL de cada beat:
 - "numeroGigante": token EXATO com número forte, ou null (máx 1 no roteiro)
 - "circulo": palavra EXATA pra circular à mão, ou null (máx 2 no roteiro)
 - "ransom": PALAVRA-IMPACTO em CAPS (≤12 letras) que resume o beat, ou null (máx 1)
-- "poster": {"cena": "3-5 peças recortadas em inglês, objetos/figuras concretos, SEM texto, SEM logo de empresa real", "manchete": "1-3 palavras CAPS pt-BR", "bg": "cream|ink|yellow (varie)"} — obrigatório em todo beat
+- "poster": obrigatório em todo beat. Duas formas:
+  • {"foto": <índice de imagensDisponiveis>, "manchete": "1-3 palavras CAPS pt-BR"} — a FOTO REAL do artigo vira colagem. PREFIRA esta forma sempre que uma foto disponível mostra o que o beat fala (o produto, a pessoa, a cena): foto real ancora a notícia. Cada foto no máximo 1 vez.
+  • {"cena": "3-5 peças recortadas em inglês, objetos/figuras concretos, SEM texto, SEM logo de empresa real", "manchete": "...", "bg": "cream|ink|yellow"} — pôster inventado, só quando nenhuma foto combina.
+  Intercale: nunca todos os beats com foto, nunca todos inventados.
 Quebre em 3 a 5 beats por unidade de sentido (frase ou par de frases). Beat 1 = o título.
 
 Responda SÓ JSON:
@@ -153,7 +156,7 @@ for (let attempt = 1; attempt <= 3 && !script; attempt++) {
       max_tokens: 16000,
       messages: [
         {role: 'system', content: resumo ? DIRECTOR_PROMPT : PROMPT},
-        {role: 'user', content: JSON.stringify(resumo ? {narracao: NARR_FIXA, titulo: detail.title} : synthesis)},
+        {role: 'user', content: JSON.stringify(resumo ? {narracao: NARR_FIXA, titulo: detail.title, imagensDisponiveis: synthesis.imagensDisponiveis} : synthesis)},
       ],
     });
     globalThis.__lastRaw = text;
@@ -260,12 +263,23 @@ if (anchor?.tipo === 'empresa' && anchor.imagem?.url) {
 // --dry: the approval gate must cost nothing beyond the script itself.
 const posterByBeat = new Map();
 if (collage && !dry) {
+  const usedPhotos = new Set();
   for (const [i, b] of script.beats.entries()) {
-    if (!b.poster?.cena) continue;
+    if (!b.poster) continue;
     try {
-      const rel = await generatePoster(id, i, {scene: b.poster.cena, headline: b.poster.manchete, bg: b.poster.bg});
+      let rel;
+      const fi = Number.isInteger(b.poster.foto) ? b.poster.foto : null;
+      if (fi != null && imagens[fi] && !usedPhotos.has(fi)) {
+        usedPhotos.add(fi);
+        const local = join(root, 'public', 'vox', `src-${id}-${fi}.jpg`);
+        if (!existsSync(local)) writeFileSync(local, Buffer.from(await (await fetch(imagens[fi].url)).arrayBuffer()));
+        rel = await generatePoster(id, i, {photo: local, headline: b.poster.manchete});
+        log(`pôster ${i + 1}: FOTO ${fi} → colagem "${b.poster.manchete}"`);
+      } else if (b.poster.cena) {
+        rel = await generatePoster(id, i, {scene: b.poster.cena, headline: b.poster.manchete, bg: b.poster.bg});
+        log(`pôster ${i + 1}: cena "${b.poster.manchete}" (${b.poster.bg})`);
+      } else continue;
       posterByBeat.set(i, rel);
-      log(`pôster ${i + 1}: "${b.poster.manchete}" (${b.poster.bg})`);
     } catch (err) {
       log(`pôster ${i + 1} falhou: ${String(err).slice(0, 60)}`);
     }
