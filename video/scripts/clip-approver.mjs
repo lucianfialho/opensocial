@@ -11,10 +11,11 @@ import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {notify} from './clip-scout-lib.mjs';
 import {checkCopy} from './copy-check.mjs';
+import {API, BRAND, HANDLE, profile, stateFile} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const CANDS = join(homedir(), '.config', 'opensocial', 'clip-candidates.json');
-const OFFSET = join(homedir(), '.config', 'opensocial', 'telegram-offset.json');
+const CANDS = stateFile('clip-candidates.json');
+const OFFSET = stateFile('telegram-offset.json');
 const TOKEN = envValue('TELEGRAM_BOT_TOKEN');
 const CHAT = String(envValue('TELEGRAM_CHAT_ID') ?? '');
 const log = (m) => console.log(`[approver ${new Date().toISOString()}] ${m}`);

@@ -13,16 +13,17 @@ import {checkCopy} from './copy-check.mjs';
 import {visualEntities} from './entities.mjs';
 import {generatePoster} from './collage-posters.mjs';
 import {fetchSources} from './sources.mjs';
+import {API, BRAND, HANDLE, profile, stateFile, apiToken} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // explainer voice: Matheus Moretti ("Urgent and Firm", v3-native pt-BR) —
 // the reportage register's voice. Overridable via env.
-process.env.ELEVENLABS_VOICE_ID = process.env.OPENSOCIAL_VOX_VOICE_ID ?? 'F7823wtD50WK1gnmgBk5';
+process.env.ELEVENLABS_VOICE_ID = process.env.OPENSOCIAL_VOX_VOICE_ID ?? profile.voiceId;
 process.env.OPENSOCIAL_TTS_STABILITY = process.env.OPENSOCIAL_TTS_STABILITY ?? '0.35';
 // 1.25x straight from the API (no ffmpeg tempo): the reportage pace
 process.env.OPENSOCIAL_TTS_SPEED = process.env.OPENSOCIAL_TTS_SPEED ?? '1.25';
 process.env.OPENSOCIAL_TTS_TEMPO = process.env.OPENSOCIAL_TTS_TEMPO ?? '1';
-const API = 'https://oagentico.com.br/api/v1';
+
 const MODEL = envValue('OPENSOCIAL_WRITER_MODEL') ?? 'anthropic/claude-sonnet-5';
 const FPS = 30;
 
@@ -35,7 +36,7 @@ const resumo = process.argv.includes('--resumo');
 if (!id) throw new Error('use --id=<eventId>');
 const log = (m) => console.log(`[vox ${new Date().toISOString()}] ${m}`);
 
-const token = envValue('OAGENTICO_TOKEN');
+const token = apiToken();
 const detail = (await (await fetch(`${API}/eventos/${id}`, {headers: {Authorization: `Bearer ${token}`}})).json()).dados;
 if (!detail?.title && !detail?.summary) throw new Error(`evento ${id} sem conteúdo`);
 
@@ -348,8 +349,8 @@ log(`registro: ${script.registro ?? '?'}`);
 log(`trilha: ${musicSrc}`);
 
 const props = {
-  brand: 'o agêntico',
-  handle: '@oagentico',
+  brand: BRAND,
+  handle: HANDLE,
   audioSrc: clip.src,
   musicSrc,
   durationInFrames: clip.durationInFrames + 45,

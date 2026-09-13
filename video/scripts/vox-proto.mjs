@@ -6,6 +6,7 @@ import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {envValue, narrateContinuous} from './tts.mjs';
+import {apiToken} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const EVENT_ID = 28012; // Dropbox: bastava seu e-mail
@@ -25,7 +26,7 @@ const apiKey = envValue('ELEVENLABS_API_KEY');
 if (!apiKey) throw new Error('ELEVENLABS_API_KEY ausente');
 
 // hero image → public/vox/ (Remotion staticFile precisa de arquivo local)
-const token = envValue('OAGENTICO_TOKEN');
+const token = apiToken();
 const detail = (await (await fetch(`https://oagentico.com.br/api/v1/eventos/${EVENT_ID}`, {
   headers: {Authorization: `Bearer ${token}`},
 })).json()).dados;

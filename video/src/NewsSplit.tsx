@@ -23,6 +23,7 @@ export const newsSplitSchema = z.object({
     z.object({name: z.string(), date: z.string(), favicon: z.string().nullable()}),
   ),
   brand: z.string(),
+  handle: z.string().default('@oagentico'),
   tagline: z.string(),
   personaSrc: z.string(),
   narration: narrationSchema,
@@ -46,7 +47,7 @@ export const calculateNewsSplitMetadata: CalculateMetadataFunction<NewsSplitProp
  * like NewsReel), the o agêntico reporter lip-syncing below.
  */
 export const NewsSplit: React.FC<NewsSplitProps> = (props) => {
-  const {image, claims, brand, tagline, personaSrc, narration} = props;
+  const {image, claims, brand, tagline, personaSrc, narration, handle} = props;
   const shownClaims = claims.slice(0, MAX_CLAIMS);
   const durations = sceneDurations(shownClaims.length, narration);
   const fallback = image ?? shownClaims.find((c) => c.image)?.image ?? null;
@@ -90,7 +91,7 @@ export const NewsSplit: React.FC<NewsSplitProps> = (props) => {
         }}
       />
       {/* wordmark lives in the white band just above the reporter */}
-      <Watermark handle="@oagentico" whiteFromFrame={Number.MAX_SAFE_INTEGER} handleTop={886} />
+      <Watermark handle={handle} whiteFromFrame={Number.MAX_SAFE_INTEGER} handleTop={886} />
       {narration ? (
         <>
           <Audio src={staticFile(narration.clip.src)} />

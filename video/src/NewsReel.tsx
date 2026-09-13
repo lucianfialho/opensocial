@@ -32,6 +32,7 @@ export const newsReelSchema = z.object({
     z.object({name: z.string(), date: z.string(), favicon: z.string().nullable()}),
   ),
   brand: z.string(),
+  handle: z.string().default('@oagentico'),
   tagline: z.string(),
   narration: narrationSchema,
 });
@@ -51,7 +52,7 @@ export const calculateNewsReelMetadata: CalculateMetadataFunction<NewsReelProps>
 
 export const NewsReel: React.FC<NewsReelProps> = (props) => {
   const {kicker, headline, highlights, dateline, independentSources, image} = props;
-  const {claims, sources, brand, tagline, narration} = props;
+  const {claims, sources, brand, tagline, narration, handle} = props;
   const shownClaims = claims.slice(0, MAX_CLAIMS);
   const durations = sceneDurations(shownClaims.length, narration);
   const closingStart =
@@ -94,7 +95,7 @@ export const NewsReel: React.FC<NewsReelProps> = (props) => {
           <ClosingScene brand={brand} tagline={tagline} image={image} durationInFrames={durations.closing} />
         </Series.Sequence>
       </Series>
-      <Watermark handle="@oagentico" whiteFromFrame={closingStart} />
+      <Watermark handle={handle} whiteFromFrame={closingStart} />
       {/* continuous voice + global word-by-word caption on top of every scene */}
       {narration ? (
         <>

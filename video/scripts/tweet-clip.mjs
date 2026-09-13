@@ -11,6 +11,7 @@ import {createHash} from 'node:crypto';
 import {existsSync, mkdirSync, writeFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {BRAND} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 30;
@@ -75,6 +76,7 @@ if (duration > maxSeconds) {
 }
 
 const props = {
+  brand: BRAND.replace(/\s+/g, ''),
   headline,
   credit: credit ? `via ${credit}` : '',
   videoSrc: rel,

@@ -1,8 +1,9 @@
 // Maps an o agêntico event (list item + detail) to NewsReel props.
 import {pickHighlights} from './pick-highlights.mjs';
+import {API, BRAND, HANDLE, profile, stateFile} from './profile.mjs';
 
-const BRAND = 'o agêntico';
-const CTA_HANDLE = '@oagentico';
+
+const CTA_HANDLE = HANDLE;
 const TAGLINE = 'o futuro da IA, todo dia, num clique';
 
 /** Splits pt-BR prose into sentences without breaking on decimals ("2.0"). */

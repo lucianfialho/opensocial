@@ -11,11 +11,12 @@ import {fileURLToPath} from 'node:url';
 import {envValue} from './tts.mjs';
 import {judgeHeat} from './heat-judge.mjs';
 import {notify} from './clip-scout-lib.mjs';
+import {API, BRAND, HANDLE, profile, stateFile, apiToken} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cli = join(root, '..', 'cli', 'dist', 'index.js');
-const API = 'https://oagentico.com.br/api/v1';
-const STATE_FILE = join(homedir(), '.config', 'opensocial', 'oagentico-queue.json');
+
+const STATE_FILE = stateFile('oagentico-queue.json');
 
 // pacing knobs — the ceiling is Meta's action block, not hardware, so ramp
 // in steps (6 → 8 → 12) watching for 2207051. Overridable per machine via
@@ -45,7 +46,7 @@ const dry = process.argv.includes('--dry');
 const force = process.argv.includes('--force');
 const log = (m) => console.log(`[tick ${new Date().toISOString()}] ${m}`);
 
-const token = envValue('OAGENTICO_TOKEN');
+const token = apiToken();
 const state = existsSync(STATE_FILE)
   ? JSON.parse(readFileSync(STATE_FILE, 'utf8'))
   : {seen: {}, published: {}, queue: []};

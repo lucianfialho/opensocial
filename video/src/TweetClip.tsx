@@ -8,6 +8,7 @@ loadFont({family: 'Gofar Serif', url: staticFile('fonts/GofarSerif.otf')});
 loadFont({family: 'Inter', url: staticFile('fonts/Inter-wght-800.ttf'), weight: '800'});
 
 export const tweetClipSchema = z.object({
+  brand: z.string().default('oagêntico'),
   headline: z.string(),
   credit: z.string(),
   videoSrc: z.string(),
@@ -58,7 +59,7 @@ export const TweetClip: React.FC<TweetClipProps> = (props) => {
           textShadow: '0 2px 12px rgba(0,0,0,0.45)',
         }}
       >
-        oagêntico
+        {props.brand}
       </div>
       <div
         style={{

@@ -13,11 +13,12 @@ import {judgeEvent, searchYouTube, searchTavily, searchRadarX, searchNasaVideos,
 import {checkCopy} from './copy-check.mjs';
 import {judgeHeat} from './heat-judge.mjs';
 import {execFileSync} from 'node:child_process';
+import {API, BRAND, HANDLE, profile, stateFile, apiToken} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const API = 'https://oagentico.com.br/api/v1';
-const STATE = join(homedir(), '.config', 'opensocial', 'clips-seen.json');
-const token = envValue('OAGENTICO_TOKEN');
+
+const STATE = stateFile('clips-seen.json');
+const token = apiToken();
 const top = Number(process.argv.find((a) => a.startsWith('--top='))?.split('=')[1] ?? 5);
 
 const seen = existsSync(STATE) ? JSON.parse(readFileSync(STATE, 'utf8')) : {};
@@ -183,7 +184,7 @@ for (const event of dados.slice(0, top)) {
 
 writeFileSync(STATE, JSON.stringify(seen, null, 2));
 // candidates persist with status so the Telegram approver can act on them
-const CANDS = join(homedir(), '.config', 'opensocial', 'clip-candidates.json');
+const CANDS = stateFile('clip-candidates.json');
 const book = existsSync(CANDS) ? JSON.parse(readFileSync(CANDS, 'utf8')) : {};
 for (const c of candidates) {
   book[c.eventId] = {...c, status: 'pending', foundAt: new Date().toISOString()};

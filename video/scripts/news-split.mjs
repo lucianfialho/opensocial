@@ -8,9 +8,10 @@ import {fileURLToPath} from 'node:url';
 import {buildReelProps} from './build-props.mjs';
 import {pickHighlights} from './pick-highlights.mjs';
 import {personaClip} from './magnific.mjs';
+import {API, BRAND, HANDLE, profile, stateFile} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const API = 'https://oagentico.com.br/api/v1';
+
 
 let token = process.env.OAGENTICO_TOKEN;
 if (!token && existsSync(join(root, '.env'))) {

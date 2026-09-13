@@ -41,6 +41,7 @@ const NEWS_REEL_DEFAULTS = {
     {name: 'Veículo Dois', date: '10 ago', favicon: null},
   ],
   brand: 'o agêntico',
+  handle: '@oagentico',
   tagline: 'só o que duas fontes independentes confirmam',
   narration: null,
 };
@@ -198,6 +199,7 @@ export const RemotionRoot: React.FC = () => {
           ],
           sources: [{name: 'Veículo Um', date: '15 ago', favicon: null}],
           brand: 'o agêntico',
+          handle: '@oagentico',
           tagline: 'o futuro da IA, todo dia, num clique',
           personaSrc: 'persona/news-1709-7292732b.mp4',
           narration: null,
@@ -213,6 +215,7 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={{
+          brand: 'oagêntico',
           headline: 'Manchete de exemplo sobre o vídeo que está bombando',
           credit: 'via @fonte',
           videoSrc: 'persona/news-1709-vQFjkHka47-7292732b.mp4',

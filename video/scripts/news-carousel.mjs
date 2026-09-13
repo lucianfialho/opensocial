@@ -12,12 +12,13 @@ import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {splitSentences} from './build-props.mjs';
 import {envValue} from './tts.mjs';
+import {API, BRAND, HANDLE, profile, stateFile, apiToken} from './profile.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const API = 'https://oagentico.com.br/api/v1';
+
 const CLAIMS_PER_CAROUSEL = 4;
 
-const token = envValue('OAGENTICO_TOKEN');
+const token = apiToken();
 if (!token) throw new Error('OAGENTICO_TOKEN missing');
 
 const args = process.argv.slice(2);
@@ -55,9 +56,9 @@ const articleImages = (detail.artigos ?? [])
   .filter((a) => a.imageUrl && !seenUrls.has(a.imageUrl) && seenUrls.add(a.imageUrl))
   .map((a) => ({url: a.imageUrl, credit: `Foto: ${a.sourceName}`}));
 
-const base = {brand: 'o agêntico', handle: '@oagentico'};
+const base = {brand: BRAND, handle: HANDLE};
 // brand card: no news photo — avoids guaranteed hero repetition
-const cta = {...base, kicker: 'o futuro da IA, todo dia, num clique', headline: '@oagentico', image: null, variant: 'cta'};
+const cta = {...base, kicker: profile.tagline, headline: HANDLE, image: null, variant: 'cta'};
 const CTA_LINE = 'Siga @oagentico — o futuro da IA, todo dia, num clique.';
 const TAGS = '#inteligenciaartificial #ia #tecnologia #noticias';
 

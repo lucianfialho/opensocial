@@ -3,6 +3,7 @@
 import {execFileSync} from 'node:child_process';
 import {envValue} from './tts.mjs';
 import {chatCompletion, parseJsonBlock} from './llm.mjs';
+import {API, BRAND, HANDLE, profile, stateFile} from './profile.mjs';
 
 const MODEL = envValue('OPENSOCIAL_JUDGE_MODEL') ?? 'deepseek/deepseek-v4-flash';
 
@@ -194,7 +195,7 @@ export async function judgeRadarFind(title, url) {
     model: envValue('OPENSOCIAL_JUDGE_MODEL') ?? 'deepseek/deepseek-v4-flash',
     max_tokens: 1024,
     messages: [
-        {role: 'system', content: `Você faz triagem de vídeos virais para o @oagentico (notícias de IA/tech, Brasil). Aprova só o que é: sobre IA/robótica/tech, visualmente interessante, e crível (nada com cara de fake/fora de contexto/cringe de marketing).
+        {role: 'system', content: `Você faz triagem de vídeos virais para o ${HANDLE} (${profile.niche}). Aprova só o que é: sobre IA/robótica/tech, visualmente interessante, e crível (nada com cara de fake/fora de contexto/cringe de marketing).
 
 MANCHETE — regras duras:
 - Nunca descreva o vídeo ("Vídeo mostra...", "Vídeo debate..." = PROIBIDO)
