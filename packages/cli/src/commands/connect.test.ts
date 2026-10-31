@@ -48,4 +48,19 @@ describe('connectWith', () => {
     const { deps } = makeDeps(false)
     await expect(connectWith('constructor', deps)).rejects.toThrow(/Unknown platform/)
   })
+  it('passes --as and --org through to authorizeUrl and exchangeCode extras', async () => {
+    const { adapter, deps } = makeDeps(false)
+    await connectWith('fake', deps, { as: 'member', org: '143109039' })
+    const authExtra = adapter.authorizeUrl.mock.calls[0][3] as { as?: string } | undefined
+    const exchangeExtra = (adapter.exchangeCode.mock.calls[0] as unknown[])[4] as { as?: string; org?: string } | undefined
+    expect(authExtra?.as).toBe('member')
+    expect(exchangeExtra?.as).toBe('member')
+    expect(exchangeExtra?.org).toBe('143109039')
+  })
+  it('passes no as/org extras when neither option is given', async () => {
+    const { adapter, deps } = makeDeps(false)
+    await connectWith('fake', deps)
+    expect(adapter.authorizeUrl.mock.calls[0][3]).toBeUndefined()
+    expect((adapter.exchangeCode.mock.calls[0] as unknown[])[4]).toBeUndefined()
+  })
 })

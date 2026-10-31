@@ -8,7 +8,12 @@ const program = new Command('opensocial')
   .description('Post to social platforms from local pipelines. BYO credentials.')
   .version('0.1.0')
 
-program.command('connect <platform>').description('Connect an account via OAuth').action(connectCommand)
+program
+  .command('connect <platform>')
+  .description('Connect an account via OAuth')
+  .option('--as <kind>', 'linkedin: member | organization (default organization)')
+  .option('--org <id>', 'linkedin: organization id when you administer more than one page')
+  .action(connectCommand)
 program.command('accounts').description('List connected accounts').action(accountsCommand)
 program
   .command('post')
