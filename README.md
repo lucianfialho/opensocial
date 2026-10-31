@@ -52,7 +52,7 @@ Exit code is `0` only if every target platform published successfully.
 |---|---|---|---|
 | Instagram | image, carousel (≤10), Reel (single video) | public URL only | needs a business/creator account + [setup guide](docs/setup-instagram.md) |
 | TikTok | video (≤64MB, direct upload), photos (1–35, public URL) | direct upload (video) / public URL (photos) | unaudited apps post `SELF_ONLY` — see [setup guide](docs/setup-tiktok.md) |
-| LinkedIn | text, text + 1 image | direct upload | personal profile via the self-serve "Share on LinkedIn" product (`w_member_social`) — see [setup guide](docs/setup-linkedin.md) |
+| LinkedIn | text, text + 1 image | direct upload | company page (default) or personal profile (`--as member`) via the Community Management API — see [setup guide](docs/setup-linkedin.md) |
 | X | text, text + 1 image (≤ 280 weighted chars, URLs count 23) | direct upload | OAuth 2.0 with PKCE; pay-per-use API (a post with a link costs ~13× one without) — see [setup guide](docs/setup-x.md) |
 
 Caption limits: Instagram and TikTok 2200 characters, LinkedIn 3000 (after escaping), X 280
