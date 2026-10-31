@@ -4,6 +4,10 @@ export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 }
 
+export function rawResponse(body: string | null, status = 200, headers: Record<string, string> = {}): Response {
+  return new Response(body, { status, headers })
+}
+
 export function sequenceFetch(responses: Response[]) {
   const calls: { url: string; init?: RequestInit }[] = []
   const queue = [...responses]
