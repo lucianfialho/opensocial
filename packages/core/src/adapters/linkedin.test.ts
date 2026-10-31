@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { linkedinAdapter, escapeLinkedInLittleText } from './linkedin.js'
 import { jsonResponse, rawResponse, sequenceFetch } from '../test-helpers.js'
-import { ApiError, AuthExpiredError } from '../errors.js'
+import { ApiError, AuthExpiredError, MediaRejectedError } from '../errors.js'
 
 const creds = { clientId: 'CID', clientSecret: 'CSEC' }
 const redirect = 'http://localhost:8976/callback'
@@ -18,10 +18,20 @@ function tmpJpg(): string {
 }
 
 describe('escapeLinkedInLittleText', () => {
-  it('escapes reserved characters', () => {
+  it('escapes reserved characters, but not a # that starts a hashtag', () => {
     expect(escapeLinkedInLittleText('a (b) #c @d [e] {f} *g* _h_ ~i~ <j> |k| \\l')).toBe(
-      'a \\(b\\) \\#c \\@d \\[e\\] \\{f\\} \\*g\\* \\_h\\_ \\~i\\~ \\<j\\> \\|k\\| \\\\l',
+      'a \\(b\\) #c \\@d \\[e\\] \\{f\\} \\*g\\* \\_h\\_ \\~i\\~ \\<j\\> \\|k\\| \\\\l',
     )
+  })
+  it('leaves a URL untouched even though it contains reserved characters', () => {
+    const text = 'veja https://x.com/path_with(parens)?q=1 aqui'
+    expect(escapeLinkedInLittleText(text)).toBe(text)
+  })
+  it('keeps #IA as a linkifiable hashtag', () => {
+    expect(escapeLinkedInLittleText('#IA')).toBe('#IA')
+  })
+  it('escapes a standalone # that is not a hashtag', () => {
+    expect(escapeLinkedInLittleText('a # b')).toBe('a \\# b')
   })
 })
 
@@ -83,6 +93,22 @@ describe('validate', () => {
     expect(linkedinAdapter.validate({ text: 'ok', media: [] })).toEqual([])
     expect(linkedinAdapter.validate({ text: 'ok', media: [{ source: 'a.jpg' }] })).toEqual([])
   })
+  it('measures the 3000-char limit on the escaped text, not the raw text', () => {
+    // "(x)" repeated raw chars escape to "\(x\)" (5 chars per 3 raw chars), so a raw
+    // length of 2900 built from this pattern crosses 3000 once escaped.
+    const text = '(x)'.repeat(967).slice(0, 2900)
+    expect(text.length).toBe(2900)
+    expect(linkedinAdapter.validate({ text, media: [] })[0].message).toMatch(/3,?000/)
+  })
+  it('accepts 2900 plain chars (no reserved chars, so escaping does not change the length)', () => {
+    const text = 'x'.repeat(2900)
+    expect(linkedinAdapter.validate({ text, media: [] })).toEqual([])
+  })
+  it('rejects a URL-sourced image (public URLs are not supported for direct upload)', () => {
+    expect(linkedinAdapter.validate({ text: 'ok', media: [{ source: 'https://x/y.jpg' }] })[0].message).toMatch(
+      /image must be a local file path/,
+    )
+  })
 })
 
 describe('publish', () => {
@@ -96,7 +122,7 @@ describe('publish', () => {
     expect(headers['Authorization']).toBe('Bearer TOK')
     const body = JSON.parse(String(calls[0].init?.body))
     expect(body.author).toBe('urn:li:person:SUB123')
-    expect(body.commentary).toBe('Olá \\(mundo\\) \\#tag')
+    expect(body.commentary).toBe('Olá \\(mundo\\) #tag')
     expect(body.lifecycleState).toBe('PUBLISHED')
     expect(body.content).toBeUndefined()
     expect(out).toEqual({ platform: 'linkedin', id: 'urn:li:share:999', url: 'https://www.linkedin.com/feed/update/urn:li:share:999' })
@@ -126,5 +152,11 @@ describe('publish', () => {
   it('fails when x-restli-id is missing', async () => {
     const { fetch } = sequenceFetch([rawResponse(null, 201)])
     await expect(linkedinAdapter.publish(account, { text: 'x', media: [] }, {}, fetch)).rejects.toThrow(/did not return the post URN/)
+  })
+  it('rejects a URL-sourced image at publish time with MediaRejectedError', async () => {
+    const { fetch } = sequenceFetch([])
+    await expect(
+      linkedinAdapter.publish(account, { text: 'x', media: [{ kind: 'image', url: 'https://x/y.jpg' }] }, {}, fetch),
+    ).rejects.toBeInstanceOf(MediaRejectedError)
   })
 })

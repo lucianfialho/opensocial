@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
 import type { PlatformAdapter } from '../adapter.js'
 import type { Account, Fetch, PublishResult, ValidationIssue } from '../types.js'
-import { ApiError, AuthExpiredError } from '../errors.js'
+import { ApiError, AuthExpiredError, MediaRejectedError } from '../errors.js'
 import { mediaKind } from '../post.js'
+import { isUrl } from '../media.js'
 
 const AUTH = 'https://www.linkedin.com/oauth/v2'
 const API = 'https://api.linkedin.com'
@@ -10,9 +11,26 @@ const VERSION = '202601'
 const MAX_TEXT = 3000
 
 /** LinkedIn's "little text format" reserves these characters for mentions,
- *  hashtags and templates; unescaped they silently mangle the post. */
+ *  hashtags and templates; unescaped they silently mangle the post. URLs are
+ *  passed through untouched (escaping inside a URL breaks it), and `#` is left
+ *  alone when it starts a hashtag (followed by a letter/digit) so hashtags
+ *  still linkify — it is escaped in every other position. */
 export function escapeLinkedInLittleText(text: string): string {
-  return text.replace(/[\\|{}@\[\]()<>#*_~]/g, '\\$&')
+  const urlPattern = /https?:\/\/\S+/g
+  let result = ''
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = urlPattern.exec(text))) {
+    result += escapeSegment(text.slice(lastIndex, match.index))
+    result += match[0]
+    lastIndex = match.index + match[0].length
+  }
+  result += escapeSegment(text.slice(lastIndex))
+  return result
+}
+
+function escapeSegment(segment: string): string {
+  return segment.replace(/[\\|{}@\[\]()<>*_~]|#(?![\p{L}\p{N}])/gu, '\\$&')
 }
 
 function restHeaders(token: string): Record<string, string> {
@@ -104,10 +122,12 @@ export const linkedinAdapter: PlatformAdapter = {
   validate(post): ValidationIssue[] {
     const issues: ValidationIssue[] = []
     if (!post.text.trim() && post.media.length === 0) issues.push({ platform: 'linkedin', message: 'LinkedIn post needs text or one image.' })
-    if (post.text.length > MAX_TEXT) issues.push({ platform: 'linkedin', message: `Text is ${post.text.length} chars; LinkedIn allows at most 3000.` })
+    const escapedLength = escapeLinkedInLittleText(post.text).length
+    if (escapedLength > MAX_TEXT) issues.push({ platform: 'linkedin', message: `Text is ${escapedLength} chars after escaping; LinkedIn allows at most 3000.` })
     const images = post.media.filter((m) => mediaKind(m.source) === 'image')
     if (images.length > 1) issues.push({ platform: 'linkedin', message: `Post has ${images.length} images; this version supports at most 1 image.` })
     if (post.media.some((m) => mediaKind(m.source) === 'video')) issues.push({ platform: 'linkedin', message: 'LinkedIn: vídeo não suportado nesta versão.' })
+    if (post.media.some((m) => isUrl(m.source))) issues.push({ platform: 'linkedin', message: 'LinkedIn: image must be a local file path (public URLs are not supported for direct upload)' })
     return issues
   },
 
@@ -118,7 +138,7 @@ export const linkedinAdapter: PlatformAdapter = {
     let content: { media: { id: string; altText?: string } } | undefined
 
     if (image) {
-      if (!image.filePath) throw new ApiError('LinkedIn image must be a local file (direct upload)', 400)
+      if (!image.filePath) throw new MediaRejectedError('LinkedIn image must be a local file (direct upload)')
       const init = await (await ensureOk(
         await fetchImpl(`${API}/rest/images?action=initializeUpload`, {
           method: 'POST', headers: restHeaders(token),
