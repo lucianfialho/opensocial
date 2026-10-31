@@ -13,15 +13,22 @@ import { instagramAdapter } from './adapters/instagram.js'
 import { tiktokAdapter } from './adapters/tiktok.js'
 import { youtubeAdapter } from './adapters/youtube.js'
 
+export interface AuthorizeExtra { codeChallenge?: string }
+export interface ExchangeExtra { codeVerifier?: string }
+
 export interface PlatformAdapter {
   platform: Platform
   mediaIngestion: Record<MediaKind, IngestionMode>
-  authorizeUrl(creds: AppCredentials, redirectUri: string, state: string): string
+  /** true when the platform requires PKCE (S256); `connect` then passes
+   *  `extra.codeChallenge` to authorizeUrl and `extra.codeVerifier` to exchangeCode. */
+  pkce?: boolean
+  authorizeUrl(creds: AppCredentials, redirectUri: string, state: string, extra?: AuthorizeExtra): string
   exchangeCode(
     creds: AppCredentials,
     code: string,
     redirectUri: string,
     fetchImpl?: Fetch,
+    extra?: ExchangeExtra,
   ): Promise<Account>
   refreshToken(
     creds: AppCredentials,

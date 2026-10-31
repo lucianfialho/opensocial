@@ -3,7 +3,7 @@ import { createServer as createTlsServer } from 'node:https'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, createHash } from 'node:crypto'
 import { configDir } from './config.js'
 import { OpenSocialError } from './errors.js'
 
@@ -111,4 +111,16 @@ export function waitForCallback(
   promise.catch(() => {})
 
   return promise
+}
+
+/** PKCE (RFC 7636): verifier = 32 random bytes as base64url (43 chars),
+ *  challenge = base64url(sha256(verifier)). X requires it; the other
+ *  platforms ignore it. */
+export function pkceChallenge(verifier: string): string {
+  return createHash('sha256').update(verifier).digest('base64url')
+}
+
+export function pkcePair(): { verifier: string; challenge: string } {
+  const verifier = randomBytes(32).toString('base64url')
+  return { verifier, challenge: pkceChallenge(verifier) }
 }
