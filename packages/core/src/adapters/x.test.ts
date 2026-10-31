@@ -18,6 +18,13 @@ function tmpJpg(): string {
   return p
 }
 
+function tmpPng(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'x-'))
+  const p = join(dir, 'card.png')
+  writeFileSync(p, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+  return p
+}
+
 describe('weightedLength', () => {
   it('counts urls as 23 and other text by code point', () => {
     expect(weightedLength('abc')).toBe(3)
@@ -85,7 +92,7 @@ describe('validate', () => {
     expect(xAdapter.validate({ text: 'ok', media: [{ source: 'a.jpg' }, { source: 'b.jpg' }] })[0].message).toMatch(/at most 1 image/i)
     expect(xAdapter.validate({ text: 'ok', media: [{ source: 'a.mp4' }] })[0].message).toMatch(/vídeo não suportado nesta versão/)
   })
-  it('accepts 280 weighted exactly', () => {
+  it('accepts a weighted length under 280 (234 chars + url = 258)', () => {
     const text = 'x'.repeat(234) + ' https://oagentico.com.br/qualquer/coisa/longa/aqui/mesmo'
     expect(weightedLength(text)).toBe(258)
     expect(xAdapter.validate({ text, media: [{ source: 'a.jpg' }] })).toEqual([])
@@ -112,6 +119,18 @@ describe('publish', () => {
     expect(form.get('media')).toBeInstanceOf(Blob)
     expect(JSON.parse(String(calls[1].init?.body))).toEqual({ text: 'legenda', media: { media_ids: ['MEDIA1'] } })
     expect(out.id).toBe('778')
+  })
+  it('uploads a png with its real mime type and filename', async () => {
+    const { fetch, calls } = sequenceFetch([
+      jsonResponse({ data: { id: 'MEDIA2', media_key: '3_MEDIA2' } }),
+      jsonResponse({ data: { id: '779', text: 'legenda' } }, 201),
+    ])
+    await xAdapter.publish(account, { text: 'legenda', media: [{ kind: 'image', filePath: tmpPng() }] }, {}, fetch)
+    const form = calls[0].init?.body as FormData
+    const media = form.get('media') as File
+    expect(media).toBeInstanceOf(Blob)
+    expect(media.type).toBe('image/png')
+    expect(media.name).toBe('card.png')
   })
   it('maps 429 to RateLimitError with retryAfterSeconds from x-rate-limit-reset', async () => {
     const reset = Math.floor(Date.now() / 1000) + 90

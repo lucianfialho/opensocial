@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { basename } from 'node:path'
 import type { PlatformAdapter } from '../adapter.js'
 import type { Fetch, PublishResult, ValidationIssue } from '../types.js'
 import { ApiError, AuthExpiredError, RateLimitError } from '../errors.js'
@@ -19,6 +20,14 @@ export function weightedLength(text: string): number {
 
 function basicAuth(creds: { clientId: string; clientSecret: string }): string {
   return 'Basic ' + Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64')
+}
+
+function imageMime(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase() ?? ''
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'
+  if (ext === 'png') return 'image/png'
+  if (ext === 'webp') return 'image/webp'
+  return 'application/octet-stream'
 }
 
 async function ensureOk(res: Response, context: string): Promise<Response> {
@@ -131,7 +140,7 @@ export const xAdapter: PlatformAdapter = {
     if (image) {
       if (!image.filePath) throw new ApiError('X image must be a local file (direct upload)', 400)
       const form = new FormData()
-      form.append('media', new Blob([readFileSync(image.filePath)], { type: 'image/jpeg' }), 'image.jpg')
+      form.append('media', new Blob([readFileSync(image.filePath)], { type: imageMime(image.filePath) }), basename(image.filePath))
       form.append('media_category', 'tweet_image')
       const up = await (await ensureOk(
         await fetchImpl(`${API}/media/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }),
