@@ -13,7 +13,7 @@ program.command('accounts').description('List connected accounts').action(accoun
 program
   .command('post')
   .description('Publish a post to one or more platforms')
-  .requiredOption('--to <platforms>', 'comma-separated: instagram,tiktok')
+  .requiredOption('--to <platforms>', 'comma-separated: instagram,tiktok,youtube,linkedin,x')
   .option('--text <text>', 'post text / caption')
   .option('--media <path-or-url...>', 'media files or public URLs')
   .option('--thumb-offset <ms>', 'reel cover frame in ms from start (Instagram)')
