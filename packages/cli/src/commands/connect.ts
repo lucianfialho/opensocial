@@ -23,8 +23,8 @@ export interface ConnectDeps {
 }
 
 export async function connectWith(platform: string, deps: ConnectDeps): Promise<Account> {
+  if (!Object.hasOwn(deps.adapters, platform)) throw new Error(`Unknown platform "${platform}". Supported: ${Object.keys(deps.adapters).join(', ')}`)
   const adapter = deps.adapters[platform]
-  if (!adapter) throw new Error(`Unknown platform "${platform}". Supported: ${Object.keys(deps.adapters).join(', ')}`)
   const p = platform as Platform
   const creds = deps.getCreds(p)
   const state = randomState()

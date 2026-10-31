@@ -44,4 +44,8 @@ describe('connectWith', () => {
     const { deps } = makeDeps(false)
     await expect(connectWith('nope', deps)).rejects.toThrow(/Unknown platform "nope"/)
   })
+  it('rejects inherited-prototype property names like "constructor" as unknown platforms', async () => {
+    const { deps } = makeDeps(false)
+    await expect(connectWith('constructor', deps)).rejects.toThrow(/Unknown platform/)
+  })
 })
