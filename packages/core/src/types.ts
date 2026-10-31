@@ -1,4 +1,4 @@
-export type Platform = 'instagram' | 'tiktok' | 'youtube' | 'linkedin'
+export type Platform = 'instagram' | 'tiktok' | 'youtube' | 'linkedin' | 'x'
 export type Fetch = typeof globalThis.fetch
 export type MediaKind = 'image' | 'video'
 export type IngestionMode = 'direct-upload' | 'public-url'

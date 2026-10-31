@@ -26,6 +26,7 @@ export interface AppConfig {
   tiktok?: AppCredentials & { privacyLevel?: string }
   youtube?: AppCredentials
   linkedin?: AppCredentials
+  x?: AppCredentials
   mediaHost?: MediaHostConfig
 }
 

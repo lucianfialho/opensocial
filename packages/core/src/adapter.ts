@@ -13,6 +13,7 @@ import { instagramAdapter } from './adapters/instagram.js'
 import { tiktokAdapter } from './adapters/tiktok.js'
 import { youtubeAdapter } from './adapters/youtube.js'
 import { linkedinAdapter } from './adapters/linkedin.js'
+import { xAdapter } from './adapters/x.js'
 
 export interface AuthorizeExtra { codeChallenge?: string }
 export interface ExchangeExtra { codeVerifier?: string }
@@ -55,4 +56,5 @@ export const adapters: Record<Platform, PlatformAdapter> = {
   tiktok: tiktokAdapter,
   youtube: youtubeAdapter,
   linkedin: linkedinAdapter,
+  x: xAdapter,
 }

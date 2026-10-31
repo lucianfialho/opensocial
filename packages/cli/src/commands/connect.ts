@@ -8,7 +8,7 @@ import {
 // Meta rejects http:// redirect URIs, so Instagram uses the https callback
 // with a self-signed localhost cert (the browser shows a warning once —
 // choose Advanced > Continue). LinkedIn and X accept http://localhost.
-const NEEDS_TLS: Record<Platform, boolean> = { instagram: true, tiktok: false, youtube: false, linkedin: false }
+const NEEDS_TLS: Record<Platform, boolean> = { instagram: true, tiktok: false, youtube: false, linkedin: false, x: false }
 
 export interface ConnectDeps {
   adapters: Record<string, PlatformAdapter>
