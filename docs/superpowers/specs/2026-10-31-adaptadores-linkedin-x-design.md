@@ -187,11 +187,16 @@ Vitest, mesmo molde de `instagram.test.ts` (`sequenceFetch` + `jsonResponse` de
 ## Pendências fora do código (31/10/2026)
 
 - **Página do agêntico no LinkedIn.** CRIADA em 31/10/2026: linkedin.com/company/o-agentico,
-  organização `urn:li:organization:143109039`, nome "Agêntico", setor Notícias on-line. Depois, no app
-  "Rayssa by thedevhype", solicitar o produto **Community Management API** apontando pra essa
-  página; a revisão é humana e leva semanas. Enquanto não sai, os posts vão no perfil pessoal
-  (`urn:li:person`). Quando sair, o adaptador troca o `author` pra `urn:li:organization:<id>`
-  (um campo) e o `connect` precisa guardar o id da organização — pequena peça própria.
+  organização `urn:li:organization:143109039`. O Community Management API exige ser o ÚNICO
+  produto do app, então o app da Rayssa não serve. App novo **"Agêntico"** (id 265070385,
+  client ID `77fasypn5gz16l`) criado em 31/10, verificado pela página (irreversível), redirect
+  `http://localhost:8976/callback` adicionado, e-mail de negócios `contato@oagentico.com.br`
+  verificado. **Pedido do Community Management API (Development Tier) enviado em 31/10/2026**
+  como Direct Advertiser + Page management; LinkedIn vai verificar o CNPJ informado e pode pedir
+  documentos por e-mail (Microsoft Vetting Services) no `contato@`. Enquanto não aprova, o
+  adaptador não posta na página; o Lucian decidiu NÃO postar no perfil pessoal. Mudança no
+  adaptador pra organização (author `urn:li:organization`, escopo `w_organization_social`,
+  `connect` guardando o id da organização) é peça própria, a fazer antes da aprovação.
 - **Crédito na conta de desenvolvedor do X.** Saldo em US$0,00 em 31/10; o modelo é pré-pago.
   Sem crédito, `connect x` funciona mas `post --to x` falha com 402/403.
 - **Secrets no `config.json`.** Client IDs dos dois apps já estão em
