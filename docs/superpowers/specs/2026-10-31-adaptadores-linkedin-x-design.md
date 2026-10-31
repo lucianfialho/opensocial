@@ -183,3 +183,16 @@ Vitest, mesmo molde de `instagram.test.ts` (`sequenceFetch` + `jsonResponse` de
   Community Management API, que leva semanas. O `author` é um campo só.
 - **Por que `direct-upload` e não media host**: as duas APIs aceitam bytes; usar o Vercel
   Blob só adicionaria um upload e uma limpeza sem ganho.
+
+## Pendências fora do código (31/10/2026)
+
+- **Página do agêntico no LinkedIn.** Criar manualmente em linkedin.com/company/setup/new
+  (logo, descrição, URL oagentico.com.br). Não depende do código. Depois, no app
+  "Rayssa by thedevhype", solicitar o produto **Community Management API** apontando pra essa
+  página; a revisão é humana e leva semanas. Enquanto não sai, os posts vão no perfil pessoal
+  (`urn:li:person`). Quando sair, o adaptador troca o `author` pra `urn:li:organization:<id>`
+  (um campo) e o `connect` precisa guardar o id da organização — pequena peça própria.
+- **Crédito na conta de desenvolvedor do X.** Saldo em US$0,00 em 31/10; o modelo é pré-pago.
+  Sem crédito, `connect x` funciona mas `post --to x` falha com 402/403.
+- **Secrets no `config.json`.** Client IDs dos dois apps já estão em
+  `~/.config/opensocial/config.json`; os secrets ficam com o Lucian.
