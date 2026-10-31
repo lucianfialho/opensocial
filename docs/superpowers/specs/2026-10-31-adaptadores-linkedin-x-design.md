@@ -186,8 +186,8 @@ Vitest, mesmo molde de `instagram.test.ts` (`sequenceFetch` + `jsonResponse` de
 
 ## Pendências fora do código (31/10/2026)
 
-- **Página do agêntico no LinkedIn.** Criar manualmente em linkedin.com/company/setup/new
-  (logo, descrição, URL oagentico.com.br). Não depende do código. Depois, no app
+- **Página do agêntico no LinkedIn.** CRIADA em 31/10/2026: linkedin.com/company/o-agentico,
+  organização `urn:li:organization:143109039`, nome "Agêntico", setor Notícias on-line. Depois, no app
   "Rayssa by thedevhype", solicitar o produto **Community Management API** apontando pra essa
   página; a revisão é humana e leva semanas. Enquanto não sai, os posts vão no perfil pessoal
   (`urn:li:person`). Quando sair, o adaptador troca o `author` pra `urn:li:organization:<id>`
