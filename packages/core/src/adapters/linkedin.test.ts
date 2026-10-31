@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { linkedinAdapter, escapeLinkedInLittleText } from './linkedin.js'
 import { jsonResponse, rawResponse, sequenceFetch } from '../test-helpers.js'
-import { ApiError, AuthExpiredError, MediaRejectedError } from '../errors.js'
+import { ApiError, AuthExpiredError, ConfigError, MediaRejectedError } from '../errors.js'
 
 const creds = { clientId: 'CID', clientSecret: 'CSEC' }
 const redirect = 'http://localhost:8976/callback'
@@ -36,22 +36,30 @@ describe('escapeLinkedInLittleText', () => {
 })
 
 describe('authorizeUrl', () => {
-  it('builds the linkedin oauth url', () => {
+  it('defaults to the organization scope', () => {
     const url = new URL(linkedinAdapter.authorizeUrl(creds, redirect, 'st1'))
     expect(url.origin + url.pathname).toBe('https://www.linkedin.com/oauth/v2/authorization')
     expect(url.searchParams.get('response_type')).toBe('code')
     expect(url.searchParams.get('client_id')).toBe('CID')
     expect(url.searchParams.get('redirect_uri')).toBe(redirect)
-    expect(url.searchParams.get('scope')).toBe('openid profile w_member_social')
+    expect(url.searchParams.get('scope')).toBe('w_organization_social r_organization_admin')
     expect(url.searchParams.get('state')).toBe('st1')
+  })
+  it('uses the member scope when extra.as is "member"', () => {
+    const url = new URL(linkedinAdapter.authorizeUrl(creds, redirect, 'st1', { as: 'member' }))
+    expect(url.searchParams.get('scope')).toBe('openid profile w_member_social')
   })
 })
 
 describe('exchangeCode', () => {
-  it('exchanges the code and reads userinfo', async () => {
+  it('organization (default): exchanges the code and picks the sole administered page', async () => {
     const { fetch, calls } = sequenceFetch([
       jsonResponse({ access_token: 'AT', expires_in: 5184000, refresh_token: 'RT' }),
-      jsonResponse({ sub: 'SUB123', name: 'Lucian Fialho' }),
+      jsonResponse({
+        elements: [
+          { organization: 'urn:li:organization:143109039', 'organization~': { localizedName: 'Agêntico', vanityName: 'o-agentico' } },
+        ],
+      }),
     ])
     const acc = await linkedinAdapter.exchangeCode(creds, 'CODE', redirect, fetch)
     expect(calls[0].url).toBe('https://www.linkedin.com/oauth/v2/accessToken')
@@ -60,8 +68,68 @@ describe('exchangeCode', () => {
     expect(form.get('code')).toBe('CODE')
     expect(form.get('redirect_uri')).toBe(redirect)
     expect(form.get('client_secret')).toBe('CSEC')
+    expect(calls[1].url).toBe(
+      'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED&projection=(elements*(organization~(localizedName,vanityName)))',
+    )
+    const headers = calls[1].init?.headers as Record<string, string>
+    expect(headers['LinkedIn-Version']).toBe('202601')
+    expect(headers['X-Restli-Protocol-Version']).toBe('2.0.0')
+    expect(acc).toMatchObject({ platform: 'linkedin', kind: 'organization', id: '143109039', username: 'Agêntico', accessToken: 'AT', refreshToken: 'RT' })
+    expect(new Date(acc.expiresAt!).getTime()).toBeGreaterThan(Date.now())
+  })
+  function twoAclsFetch() {
+    return sequenceFetch([
+      jsonResponse({ access_token: 'AT', expires_in: 5184000, refresh_token: 'RT' }),
+      jsonResponse({
+        elements: [
+          { organization: 'urn:li:organization:143109039', 'organization~': { localizedName: 'Agêntico' } },
+          { organization: 'urn:li:organization:999', 'organization~': { localizedName: 'Other Page' } },
+        ],
+      }),
+    ])
+  }
+  it('organization: rejects with both ids and --org when the member administers more than one page', async () => {
+    const { fetch } = twoAclsFetch()
+    const err = await linkedinAdapter.exchangeCode(creds, 'CODE', redirect, fetch).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ConfigError)
+    expect((err as Error).message).toMatch(/143109039/)
+    expect((err as Error).message).toMatch(/999/)
+    expect((err as Error).message).toMatch(/--org/)
+  })
+  it('organization: picks the chosen one when --org matches one of several ACLs', async () => {
+    const { fetch } = twoAclsFetch()
+    const acc = await linkedinAdapter.exchangeCode(creds, 'CODE', redirect, fetch, { org: '143109039' })
+    expect(acc).toMatchObject({ kind: 'organization', id: '143109039', username: 'Agêntico' })
+  })
+  it('organization: rejects when --org does not match any administered page', async () => {
+    const { fetch } = twoAclsFetch()
+    await expect(linkedinAdapter.exchangeCode(creds, 'CODE', redirect, fetch, { org: '000' })).rejects.toMatchObject({
+      message: expect.stringMatching(/not an administrator of organization 000/),
+    })
+  })
+  it('organization: rejects with --as member guidance when the member administers no pages', async () => {
+    const { fetch } = sequenceFetch([
+      jsonResponse({ access_token: 'AT', expires_in: 5184000, refresh_token: 'RT' }),
+      jsonResponse({ elements: [] }),
+    ])
+    await expect(linkedinAdapter.exchangeCode(creds, 'CODE', redirect, fetch)).rejects.toMatchObject({
+      message: expect.stringMatching(/--as member/),
+    })
+  })
+  it('member ({as: "member"}): exchanges the code and reads userinfo', async () => {
+    const { fetch, calls } = sequenceFetch([
+      jsonResponse({ access_token: 'AT', expires_in: 5184000, refresh_token: 'RT' }),
+      jsonResponse({ sub: 'SUB123', name: 'Lucian Fialho' }),
+    ])
+    const acc = await linkedinAdapter.exchangeCode(creds, 'CODE', redirect, fetch, { as: 'member' })
+    expect(calls[0].url).toBe('https://www.linkedin.com/oauth/v2/accessToken')
+    const form = new URLSearchParams(String(calls[0].init?.body))
+    expect(form.get('grant_type')).toBe('authorization_code')
+    expect(form.get('code')).toBe('CODE')
+    expect(form.get('redirect_uri')).toBe(redirect)
+    expect(form.get('client_secret')).toBe('CSEC')
     expect(calls[1].url).toBe('https://api.linkedin.com/v2/userinfo')
-    expect(acc).toMatchObject({ platform: 'linkedin', id: 'SUB123', username: 'Lucian Fialho', accessToken: 'AT', refreshToken: 'RT' })
+    expect(acc).toMatchObject({ platform: 'linkedin', kind: 'member', id: 'SUB123', username: 'Lucian Fialho', accessToken: 'AT', refreshToken: 'RT' })
     expect(new Date(acc.expiresAt!).getTime()).toBeGreaterThan(Date.now())
   })
 })
@@ -126,6 +194,23 @@ describe('publish', () => {
     expect(body.lifecycleState).toBe('PUBLISHED')
     expect(body.content).toBeUndefined()
     expect(out).toEqual({ platform: 'linkedin', id: 'urn:li:share:999', url: 'https://www.linkedin.com/feed/update/urn:li:share:999' })
+  })
+  it('posts as the organization when account.kind is "organization"', async () => {
+    const orgAccount = { ...account, kind: 'organization' as const, id: '143109039' }
+    const { fetch, calls } = sequenceFetch([rawResponse(null, 201, { 'x-restli-id': 'urn:li:share:1000' })])
+    await linkedinAdapter.publish(orgAccount, { text: 'ok', media: [] }, {}, fetch)
+    const body = JSON.parse(String(calls[0].init?.body))
+    expect(body.author).toBe('urn:li:organization:143109039')
+  })
+  it('uploads the image as the organization owner when account.kind is "organization"', async () => {
+    const orgAccount = { ...account, kind: 'organization' as const, id: '143109039' }
+    const { fetch, calls } = sequenceFetch([
+      jsonResponse({ value: { uploadUrl: 'https://www.linkedin.com/dms-uploads/abc', image: 'urn:li:image:IMG1' } }),
+      rawResponse(null, 201),
+      rawResponse(null, 201, { 'x-restli-id': 'urn:li:ugcPost:6' }),
+    ])
+    await linkedinAdapter.publish(orgAccount, { text: 'legenda', media: [{ kind: 'image', filePath: tmpJpg(), alt: 'card' }] }, {}, fetch)
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ initializeUploadRequest: { owner: 'urn:li:organization:143109039' } })
   })
   it('uploads the image then posts with content.media.id', async () => {
     const { fetch, calls } = sequenceFetch([

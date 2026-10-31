@@ -15,8 +15,19 @@ import { youtubeAdapter } from './adapters/youtube.js'
 import { linkedinAdapter } from './adapters/linkedin.js'
 import { xAdapter } from './adapters/x.js'
 
-export interface AuthorizeExtra { codeChallenge?: string }
-export interface ExchangeExtra { codeVerifier?: string }
+export interface AuthorizeExtra {
+  codeChallenge?: string
+  /** LinkedIn only: authorize as a person ('member') or an organization page
+   *  (the default, see exchangeCode). Other adapters ignore this. */
+  as?: 'member' | 'organization'
+}
+export interface ExchangeExtra {
+  codeVerifier?: string
+  /** LinkedIn only: must match the `as` passed to authorizeUrl. Other adapters ignore this. */
+  as?: 'member' | 'organization'
+  /** LinkedIn only: organization id to pick when the member administers more than one page. */
+  org?: string
+}
 
 export interface PlatformAdapter {
   platform: Platform

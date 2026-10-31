@@ -22,6 +22,9 @@ export interface Account {
   accessToken: string
   refreshToken?: string
   expiresAt?: string
+  /** LinkedIn only: whether this account authenticates as an organization page
+   *  or as a person. Absent (accounts saved before this field existed) means 'member'. */
+  kind?: 'member' | 'organization'
 }
 
 export interface ValidationIssue { platform: Platform; message: string }

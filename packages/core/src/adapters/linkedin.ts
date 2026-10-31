@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import type { PlatformAdapter } from '../adapter.js'
 import type { Account, Fetch, PublishResult, ValidationIssue } from '../types.js'
-import { ApiError, AuthExpiredError, MediaRejectedError } from '../errors.js'
+import { ApiError, AuthExpiredError, ConfigError, MediaRejectedError } from '../errors.js'
 import { mediaKind } from '../post.js'
 import { isUrl } from '../media.js'
 
@@ -67,17 +67,17 @@ export const linkedinAdapter: PlatformAdapter = {
   pkce: false,
   mediaIngestion: { image: 'direct-upload', video: 'direct-upload' },
 
-  authorizeUrl(creds, redirectUri, state) {
+  authorizeUrl(creds, redirectUri, state, extra) {
     const u = new URL(`${AUTH}/authorization`)
     u.searchParams.set('response_type', 'code')
     u.searchParams.set('client_id', creds.clientId)
     u.searchParams.set('redirect_uri', redirectUri)
-    u.searchParams.set('scope', 'openid profile w_member_social')
+    u.searchParams.set('scope', extra?.as === 'member' ? 'openid profile w_member_social' : 'w_organization_social r_organization_admin')
     u.searchParams.set('state', state)
     return u.toString()
   },
 
-  async exchangeCode(creds, code, redirectUri, fetchImpl = globalThis.fetch) {
+  async exchangeCode(creds, code, redirectUri, fetchImpl = globalThis.fetch, extra) {
     const tok = await tokenRequest(
       new URLSearchParams({
         grant_type: 'authorization_code', code, redirect_uri: redirectUri,
@@ -86,13 +86,53 @@ export const linkedinAdapter: PlatformAdapter = {
       fetchImpl,
       'code exchange',
     )
-    const me = await (await ensureOk(
-      await fetchImpl(`${API}/v2/userinfo`, { headers: { Authorization: `Bearer ${tok.access_token}` } }),
-      'userinfo fetch',
-    )).json() as { sub: string; name?: string; given_name?: string; family_name?: string }
-    const username = me.name ?? (`${me.given_name ?? ''} ${me.family_name ?? ''}`.trim() || me.sub)
+
+    if (extra?.as === 'member') {
+      const me = await (await ensureOk(
+        await fetchImpl(`${API}/v2/userinfo`, { headers: { Authorization: `Bearer ${tok.access_token}` } }),
+        'userinfo fetch',
+      )).json() as { sub: string; name?: string; given_name?: string; family_name?: string }
+      const username = me.name ?? (`${me.given_name ?? ''} ${me.family_name ?? ''}`.trim() || me.sub)
+      return {
+        platform: 'linkedin', kind: 'member', id: me.sub, username,
+        accessToken: tok.access_token,
+        refreshToken: tok.refresh_token,
+        expiresAt: new Date(Date.now() + tok.expires_in * 1000).toISOString(),
+      }
+    }
+
+    const acls = await (await ensureOk(
+      await fetchImpl(
+        `${API}/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED&projection=(elements*(organization~(localizedName,vanityName)))`,
+        { headers: restHeaders(tok.access_token) },
+      ),
+      'organization ACLs fetch',
+    )).json() as {
+      elements: Array<{ organization: string; 'organization~'?: { localizedName?: string; vanityName?: string } }>
+    }
+    const orgs = acls.elements.map((el) => ({
+      id: el.organization.split(':').pop()!,
+      localizedName: el['organization~']?.localizedName,
+      vanityName: el['organization~']?.vanityName,
+    }))
+
+    let chosen: (typeof orgs)[number]
+    if (extra?.org) {
+      const found = orgs.find((o) => o.id === extra.org)
+      if (!found) throw new ConfigError(`You are not an administrator of organization ${extra.org}`)
+      chosen = found
+    } else if (orgs.length === 1) {
+      chosen = orgs[0]
+    } else if (orgs.length === 0) {
+      throw new ConfigError('This LinkedIn member administers no organization pages; connect with --as member or become a page admin')
+    } else {
+      const list = orgs.map((o) => `${o.id} (${o.localizedName ?? o.vanityName ?? o.id})`).join(', ')
+      throw new ConfigError(`This LinkedIn member administers multiple organization pages: ${list}. Pick one with --org <id>.`)
+    }
+
     return {
-      platform: 'linkedin', id: me.sub, username,
+      platform: 'linkedin', kind: 'organization', id: chosen.id,
+      username: chosen.localizedName ?? chosen.vanityName ?? chosen.id,
       accessToken: tok.access_token,
       refreshToken: tok.refresh_token,
       expiresAt: new Date(Date.now() + tok.expires_in * 1000).toISOString(),
@@ -133,7 +173,7 @@ export const linkedinAdapter: PlatformAdapter = {
 
   async publish(account, post, _options, fetchImpl = globalThis.fetch): Promise<PublishResult> {
     const token = account.accessToken
-    const author = `urn:li:person:${account.id}`
+    const author = account.kind === 'organization' ? `urn:li:organization:${account.id}` : `urn:li:person:${account.id}`
     const image = post.media.find((m) => m.kind === 'image')
     let content: { media: { id: string; altText?: string } } | undefined
 
