@@ -55,7 +55,8 @@ Exit code is `0` only if every target platform published successfully.
 | LinkedIn | text, text + 1 image | direct upload | personal profile via the self-serve "Share on LinkedIn" product (`w_member_social`) — see [setup guide](docs/setup-linkedin.md) |
 | X | text, text + 1 image (≤ 280 weighted chars, URLs count 23) | direct upload | OAuth 2.0 with PKCE; pay-per-use API (a post with a link costs ~13× one without) — see [setup guide](docs/setup-x.md) |
 
-Both platforms cap caption/title at 2200 characters. `--media` accepts local file paths
+Caption limits: Instagram and TikTok 2200 characters, LinkedIn 3000 (after escaping), X 280
+weighted (URLs count 23). `--media` accepts local file paths
 or public URLs interchangeably; local files that a platform requires as a public URL are
 uploaded to your own [media host](docs/media-host.md) and deleted after publishing.
 

@@ -18,8 +18,15 @@
 
 4. `opensocial connect x` — the browser opens; log in as the account that should post
    (e.g. the brand account, not your personal one) and authorize.
+5. First post:
+
+   ```bash
+   opensocial post --to x --text "hello from opensocial" --media ./card.jpg
+   ```
 
 Notes:
+- `OPENSOCIAL_X_CLIENT_ID` / `OPENSOCIAL_X_CLIENT_SECRET` env vars override
+  `clientId`/`clientSecret` from `config.json` — useful for CI.
 - OAuth 2.0 with PKCE (S256); scopes `tweet.read tweet.write users.read offline.access`.
 - Access tokens last 2 hours; OpenSocial refreshes on 401. **Refresh tokens are single-use** —
   only one machine should publish with a given connected account, or they will invalidate each other.

@@ -17,8 +17,15 @@ Company pages need the Community Management API (manual review) and are not supp
 
 5. `opensocial connect linkedin` — the browser opens; authorize with the profile that should post.
    The account is stored as `linkedin` in `accounts.json` with the member URN id.
+6. First post:
+
+   ```bash
+   opensocial post --to linkedin --text "hello from opensocial" --media ./card.jpg
+   ```
 
 Notes:
+- `OPENSOCIAL_LINKEDIN_CLIENT_ID` / `OPENSOCIAL_LINKEDIN_CLIENT_SECRET` env vars override
+  `clientId`/`clientSecret` from `config.json` — useful for CI.
 - Access tokens last ~60 days. Refresh tokens are only issued to apps enrolled in the
   programmatic-refresh program; without one, run `opensocial connect linkedin` again when posts
   start failing with 401.
