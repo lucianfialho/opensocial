@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
 import type { PlatformAdapter } from '../adapter.js'
 import type { Fetch, PublishResult, ValidationIssue } from '../types.js'
-import { ApiError, AuthExpiredError, RateLimitError } from '../errors.js'
+import { ApiError, AuthExpiredError, MediaRejectedError, RateLimitError } from '../errors.js'
 import { mediaKind } from '../post.js'
+import { isUrl } from '../media.js'
 
 const API = 'https://api.x.com/2'
 const AUTHORIZE = 'https://x.com/i/oauth2/authorize'
@@ -11,7 +12,10 @@ const SCOPES = 'tweet.read tweet.write users.read offline.access'
 const MAX_WEIGHTED = 280
 const URL_WEIGHT = 23
 
-/** X counts every URL as 23 chars and everything else by code point. */
+/** X counts every URL as 23 chars and everything else by code point.
+ *  Known gaps: CJK/emoji characters that X weighs as 2 are counted here as 1
+ *  (no wide-character table is modeled); scheme-less links ("x.com/foo") are
+ *  counted literally by code point instead of being recognized and weighted as 23. */
 export function weightedLength(text: string): number {
   let total = 0
   const rest = text.replace(/https?:\/\/\S+/g, () => { total += URL_WEIGHT; return '' })
@@ -102,21 +106,28 @@ export const xAdapter: PlatformAdapter = {
     try {
       tok = await tokenRequest(
         creds,
-        new URLSearchParams({ grant_type: 'refresh_token', refresh_token: account.refreshToken }),
+        new URLSearchParams({
+          grant_type: 'refresh_token', refresh_token: account.refreshToken, client_id: creds.clientId,
+        }),
         fetchImpl,
         'token refresh',
       )
     } catch (err) {
-      // a refresh token is single-use: a 400 here means it was already spent or revoked
-      if (err instanceof ApiError && err.status === 400) {
+      // a refresh token is single-use: a 400 with invalid_grant/invalid_request here means
+      // it was already spent or revoked. Any other 400 (bad request shape, etc.) is a real
+      // ApiError and must not be mistaken for a spent token.
+      if (err instanceof ApiError && err.status === 400 && /invalid_grant|invalid_request/.test(err.message)) {
         throw new AuthExpiredError(`X refresh token rejected (${err.message}); run \`opensocial connect x\``)
       }
       throw err
     }
+    if (!tok.refresh_token) {
+      throw new AuthExpiredError('X did not return a new refresh token; run `opensocial connect x`')
+    }
     return {
       ...account,
       accessToken: tok.access_token,
-      refreshToken: tok.refresh_token ?? account.refreshToken,
+      refreshToken: tok.refresh_token,
       expiresAt: new Date(Date.now() + tok.expires_in * 1000).toISOString(),
     }
   },
@@ -129,6 +140,7 @@ export const xAdapter: PlatformAdapter = {
     const images = post.media.filter((m) => mediaKind(m.source) === 'image')
     if (images.length > 1) issues.push({ platform: 'x', message: `Post has ${images.length} images; this version supports at most 1 image.` })
     if (post.media.some((m) => mediaKind(m.source) === 'video')) issues.push({ platform: 'x', message: 'X: vídeo não suportado nesta versão.' })
+    if (post.media.some((m) => isUrl(m.source))) issues.push({ platform: 'x', message: 'X: image must be a local file path (public URLs are not supported for direct upload)' })
     return issues
   },
 
@@ -138,10 +150,11 @@ export const xAdapter: PlatformAdapter = {
     let mediaIds: string[] | undefined
 
     if (image) {
-      if (!image.filePath) throw new ApiError('X image must be a local file (direct upload)', 400)
+      if (!image.filePath) throw new MediaRejectedError('X image must be a local file (direct upload)')
       const form = new FormData()
       form.append('media', new Blob([readFileSync(image.filePath)], { type: imageMime(image.filePath) }), basename(image.filePath))
       form.append('media_category', 'tweet_image')
+      form.append('media_type', imageMime(image.filePath))
       const up = await (await ensureOk(
         await fetchImpl(`${API}/media/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }),
         'media upload',
@@ -155,10 +168,16 @@ export const xAdapter: PlatformAdapter = {
       await fetchImpl(`${API}/tweets`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: post.text, ...(mediaIds ? { media: { media_ids: mediaIds } } : {}) }),
+        body: JSON.stringify({
+          ...(post.text ? { text: post.text } : {}),
+          ...(mediaIds ? { media: { media_ids: mediaIds } } : {}),
+        }),
       }),
       'tweet creation',
     )).json() as { data: { id: string } }
-    return { platform: 'x', id: out.data.id, url: `https://x.com/${account.username}/status/${out.data.id}` }
+    return {
+      platform: 'x', id: out.data.id, url: `https://x.com/${account.username}/status/${out.data.id}`,
+      ...(image?.alt ? { note: 'alt text not supported on X in this version — ignored' } : {}),
+    }
   },
 }
