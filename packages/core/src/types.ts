@@ -28,7 +28,7 @@ export interface ValidationIssue { platform: Platform; message: string }
 export interface PublishResult { platform: Platform; id: string; url?: string; note?: string }
 
 export type PlatformResult =
-  | { platform: Platform; status: 'published'; id: string; url?: string }
+  | { platform: Platform; status: 'published'; id: string; url?: string; note?: string }
   | { platform: Platform; status: 'failed'; error: string }
 
 export interface ResolvedMediaItem { kind: MediaKind; url?: string; filePath?: string; alt?: string }

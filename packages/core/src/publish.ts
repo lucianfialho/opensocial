@@ -55,7 +55,7 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
           result = await adapter.publish(account, { text: ep.text, media }, options, fetchImpl)
         } else throw err
       }
-      results.push({ platform: p, status: 'published', id: result.id, url: result.url })
+      results.push({ platform: p, status: 'published', id: result.id, url: result.url, note: result.note })
     } catch (err) {
       const isRateLimited = err instanceof RateLimitError || (err instanceof ApiError && err.status === 429)
       const message = isRateLimited

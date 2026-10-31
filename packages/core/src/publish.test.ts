@@ -30,6 +30,16 @@ it('validation failure on ANY platform publishes NOTHING', async () => {
   expect(igSpy).not.toHaveBeenCalled()
 })
 
+it('a note returned by an adapter reaches the published result', async () => {
+  vi.spyOn(adapters.instagram, 'publish').mockResolvedValue({
+    platform: 'instagram', id: 'M9', url: 'https://ig/p9', note: 'alt text not supported on X in this version — ignored',
+  })
+  const results = await publishToAll(['instagram'], { text: 'x', media: [{ source: 'https://c/a.jpg' }] })
+  expect(results).toEqual([
+    { platform: 'instagram', status: 'published', id: 'M9', url: 'https://ig/p9', note: 'alt text not supported on X in this version — ignored' },
+  ])
+})
+
 it('partial failure: one platform fails, other still publishes', async () => {
   vi.spyOn(adapters.instagram, 'publish').mockResolvedValue({ platform: 'instagram', id: 'M1', url: 'https://ig/p' })
   vi.spyOn(adapters.tiktok, 'publish').mockRejectedValue(new ApiError('TikTok exploded', 500))

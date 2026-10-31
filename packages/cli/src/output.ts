@@ -5,7 +5,7 @@ export function formatResults(results: PlatformResult[], json: boolean): string 
   return results
     .map((r) =>
       r.status === 'published'
-        ? `${r.platform.padEnd(10)} published  ${r.id}${r.url ? `  ${r.url}` : ''}`
+        ? `${r.platform.padEnd(10)} published  ${r.id}${r.url ? `  ${r.url}` : ''}${r.note ? `  (${r.note})` : ''}`
         : `${r.platform.padEnd(10)} failed     ${r.error}`,
     )
     .join('\n')
