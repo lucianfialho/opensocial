@@ -10,6 +10,10 @@ export interface Post {
   media?: MediaItem[]
   /** Reel cover frame, in ms from the start (Instagram thumb_offset). */
   thumbOffsetMs?: number
+  /** Instagram only: publish a single video to Stories (24h, no caption,
+   *  no link sticker — the Graph API does not support publishing stickers)
+   *  instead of Reels. Ignored by every other adapter. */
+  story?: boolean
   overrides?: Partial<Record<Platform, { text?: string; media?: MediaItem[] }>>
 }
 

@@ -88,23 +88,31 @@ export const instagramAdapter: PlatformAdapter = {
     return { ...account, accessToken: out.access_token, expiresAt: new Date(Date.now() + out.expires_in * 1000).toISOString() }
   },
 
-  validate(post): ValidationIssue[] {
+  validate(post, options): ValidationIssue[] {
     const issues: ValidationIssue[] = []
     const kinds = post.media.map((m) => mediaKind(m.source))
+    const story = options?.story === true
     if (post.media.length === 0) issues.push({ platform: 'instagram', message: 'Instagram requires at least one media item (text-only posts are not supported).' })
     if (post.text.length > 2200) issues.push({ platform: 'instagram', message: `Caption is ${post.text.length} chars; Instagram allows at most 2200.` })
     if (post.media.length > 10) issues.push({ platform: 'instagram', message: `Carousel has ${post.media.length} items; Instagram allows at most 10.` })
     if (kinds.includes('video') && post.media.length > 1) issues.push({ platform: 'instagram', message: 'Video must be a single video (Reel); it cannot be mixed with other media.' })
+    if (story && post.media.length !== 1) issues.push({ platform: 'instagram', message: 'Stories publish a single image or video, not a carousel.' })
+    // Stories ignore text entirely — the Graph API does not support
+    // captions, link/poll/location stickers on media_type=STORIES. Warning,
+    // not an error: a caller passing text for a Story is a harmless no-op,
+    // not a reason to block the post.
     return issues
   },
 
   async publish(account, post, options, fetchImpl = globalThis.fetch): Promise<PublishResult> {
     const token = account.accessToken
     let creationId: string
+    const story = options.story === true
 
-    // Every container type (REELS, IMAGE, CAROUSEL) must reach FINISHED
-    // before media_publish — images included: publishing an image container
-    // too early fails with code 9007 / subcode 2207027 ("media not ready").
+    // Every container type (REELS, STORIES, IMAGE, CAROUSEL) must reach
+    // FINISHED before media_publish — images included: publishing an image
+    // container too early fails with code 9007 / subcode 2207027 ("media
+    // not ready").
     const awaitFinished = async (id: string, label: string) => {
       const status = await pollUntil(
         async () => {
@@ -119,7 +127,17 @@ export const instagramAdapter: PlatformAdapter = {
       }
     }
 
-    if (post.media.length === 1 && post.media[0].kind === 'video') {
+    if (story) {
+      // media_type=STORIES: image_url or video_url only — no caption, no
+      // thumb_offset, no stickers (link/poll/location "not supported" per
+      // the Graph API docs, confirmed 01/11/2026). 24h ephemeral, reach
+      // only — never the conversion path a caption/link would give.
+      creationId = await createContainer(account.id, token, {
+        media_type: 'STORIES',
+        ...(post.media[0].kind === 'video' ? { video_url: post.media[0].url! } : { image_url: post.media[0].url! }),
+      }, fetchImpl)
+      await awaitFinished(creationId, 'instagram story processing')
+    } else if (post.media.length === 1 && post.media[0].kind === 'video') {
       creationId = await createContainer(account.id, token, {
         media_type: 'REELS', video_url: post.media[0].url!, caption: post.text,
         ...(options.thumbOffsetMs != null ? { thumb_offset: String(options.thumbOffsetMs) } : {}),
@@ -172,6 +190,17 @@ export const instagramAdapter: PlatformAdapter = {
         if (!retryable) throw err
         await new Promise((r) => setTimeout(r, pollInterval() * 3))
       }
+    }
+    // Stories are ephemeral (24h) — the docs don't say whether `permalink`
+    // is even populated for them, and it's not worth failing a published
+    // post over a field that may just come back empty. Feed/Reels keep the
+    // hard fetch (a missing permalink there is itself worth surfacing).
+    if (story) {
+      const perma = await json<{ permalink?: string }>(
+        await fetchImpl(`${GRAPH}/${API_VERSION}/${published!.id}?fields=permalink&access_token=${token}`),
+        'permalink fetch',
+      ).catch(() => ({ permalink: undefined }))
+      return { platform: 'instagram', id: published!.id, url: perma.permalink }
     }
     const perma = await json<{ permalink?: string }>(
       await fetchImpl(`${GRAPH}/${API_VERSION}/${published!.id}?fields=permalink&access_token=${token}`),

@@ -47,6 +47,14 @@ describe('validate', () => {
   it('accepts single image with caption', () => {
     expect(instagramAdapter.validate({ text: 'ok', media: [{ source: 'a.jpg' }] })).toEqual([])
   })
+  it('rejects a story with more than one media item', () => {
+    const media = [{ source: 'a.jpg' }, { source: 'b.jpg' }]
+    const issues = instagramAdapter.validate({ text: '', media }, { story: true })
+    expect(issues[0].message).toMatch(/single image or video, not a carousel/i)
+  })
+  it('accepts a single-video story', () => {
+    expect(instagramAdapter.validate({ text: '', media: [{ source: 'a.mp4' }] }, { story: true })).toEqual([])
+  })
 })
 
 describe('publish', () => {
@@ -132,6 +140,61 @@ describe('publish', () => {
       expect(String(calls[0].init?.body)).toContain('media_type=REELS')
       expect(calls[1].url).toContain('fields=status_code')
       expect(out.id).toBe('M3')
+    })
+  })
+
+  describe('story', () => {
+    beforeEach(() => {
+      process.env.OPENSOCIAL_POLL_INTERVAL_MS = '1'
+    })
+    afterEach(() => {
+      delete process.env.OPENSOCIAL_POLL_INTERVAL_MS
+    })
+
+    it('video story: container has no caption/thumb_offset, polls, publishes', async () => {
+      const { fetch, calls } = sequenceFetch([
+        jsonResponse({ id: 'S1' }),
+        jsonResponse({ status_code: 'FINISHED' }),
+        jsonResponse({ id: 'M4' }),
+        jsonResponse({ permalink: 'https://www.instagram.com/stories/u/1/' }),
+      ])
+      const out = await instagramAdapter.publish(
+        account, { text: 'ignored — stories have no caption', media: [{ kind: 'video', url: 'https://cdn/v.mp4' }] },
+        { story: true, thumbOffsetMs: 500 }, fetch,
+      )
+      const body = String(calls[0].init?.body)
+      expect(body).toContain('media_type=STORIES')
+      expect(body).toContain('video_url=')
+      expect(body).not.toContain('caption')
+      expect(body).not.toContain('thumb_offset')
+      expect(calls[1].url).toContain('fields=status_code')
+      expect(out.id).toBe('M4')
+    })
+
+    it('image story: image_url, same container+publish flow', async () => {
+      const { fetch, calls } = sequenceFetch([
+        jsonResponse({ id: 'S2' }),
+        jsonResponse({ status_code: 'FINISHED' }),
+        jsonResponse({ id: 'M5' }),
+        jsonResponse({ permalink: 'https://www.instagram.com/stories/u/2/' }),
+      ])
+      await instagramAdapter.publish(
+        account, { text: '', media: [{ kind: 'image', url: 'https://cdn/x.jpg' }] }, { story: true }, fetch,
+      )
+      expect(String(calls[0].init?.body)).toContain('image_url=')
+    })
+
+    it('a missing permalink never fails the publish (ephemeral content, field may come back empty)', async () => {
+      const { fetch } = sequenceFetch([
+        jsonResponse({ id: 'S3' }),
+        jsonResponse({ status_code: 'FINISHED' }),
+        jsonResponse({ id: 'M6' }),
+        jsonResponse({ error: { message: 'no permalink for story' } }, 400),
+      ])
+      const out = await instagramAdapter.publish(
+        account, { text: '', media: [{ kind: 'video', url: 'https://cdn/v.mp4' }] }, { story: true }, fetch,
+      )
+      expect(out).toEqual({ platform: 'instagram', id: 'M6', url: undefined })
     })
   })
 })

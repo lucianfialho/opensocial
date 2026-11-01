@@ -22,6 +22,7 @@ program
   .option('--text <text>', 'post text / caption')
   .option('--media <path-or-url...>', 'media files or public URLs')
   .option('--thumb-offset <ms>', 'reel cover frame in ms from start (Instagram)')
+  .option('--story', 'instagram: publish to Stories (24h, no caption, no link) instead of Reels')
   .option('--json', 'read full Post JSON from stdin; emit JSON results')
   .action(postCommand)
 

@@ -23,7 +23,7 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
   const issues: ValidationIssue[] = []
   for (const p of platforms) {
     accounts.set(p, getAccount(p))
-    issues.push(...adapters[p].validate(effectivePost(post, p)))
+    issues.push(...adapters[p].validate(effectivePost(post, p), { story: post.story }))
   }
   if (issues.length > 0) throw new ValidationError(issues)
 
@@ -33,7 +33,7 @@ export async function publishToAll(platforms: Platform[], post: Post, deps: Publ
   for (const p of platforms) {
     const adapter = adapters[p]
     const ep = effectivePost(post, p)
-    const options = { tiktokPrivacyLevel: config.tiktok?.privacyLevel, thumbOffsetMs: post.thumbOffsetMs }
+    const options = { tiktokPrivacyLevel: config.tiktok?.privacyLevel, thumbOffsetMs: post.thumbOffsetMs, story: post.story }
     let cleanup: (() => Promise<void>) | undefined
     try {
       const resolved = await resolveMedia(ep.media, adapter.mediaIngestion, host)

@@ -48,7 +48,7 @@ export interface PlatformAdapter {
     account: Account,
     fetchImpl?: Fetch,
   ): Promise<Account>
-  validate(post: { text: string; media: { source: string; alt?: string }[] }): ValidationIssue[]
+  validate(post: { text: string; media: { source: string; alt?: string }[] }, options?: AdapterPublishOptions): ValidationIssue[]
   publish(
     account: Account,
     post: PreparedPost,
@@ -60,6 +60,8 @@ export interface PlatformAdapter {
 export interface AdapterPublishOptions {
   tiktokPrivacyLevel?: string
   thumbOffsetMs?: number
+  /** Instagram only — see Post.story. */
+  story?: boolean
 }
 
 export const adapters: Record<Platform, PlatformAdapter> = {
